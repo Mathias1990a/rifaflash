@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, User, Sparkles, Trophy, MessageCircle, Zap } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { RegistrationForm } from './components/RegistrationForm';
-import { PaymentModal } from './components/PaymentModal';
 import { WinnerAnimation } from './components/WinnerAnimation';
 import { UserProfileCard } from './components/UserProfileCard';
 import { NumberGrid } from './components/NumberGrid';
@@ -12,7 +11,8 @@ import { RoomSelector } from './components/RoomSelector';
 import { CasinoBolillero } from './components/CasinoBolillero';
 import { BankTransferPayment } from './components/BankTransferPayment';
 import { AdminPanel, usePaymentConfig } from './components/AdminPanel';
-import { Logo, SplashScreen } from './components/Logo';
+import { AuthModal, AdminLogin } from './components/AuthModal';
+import { Logo } from './components/Logo';
 import { useSupabaseUser, useSupabaseRoom, useSupabaseWinners } from './hooks/useSupabase';
 import { RoomType, Winner } from './types';
 import './index.css';
@@ -23,18 +23,15 @@ function App() {
   
   const [selectedRoom, setSelectedRoom] = useState<RoomType>('standard');
   const [showRegistration, setShowRegistration] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
-  const [selectedNumber, setSelectedNumber] = useState<any>(null);
   const [showWinner, setShowWinner] = useState(false);
   const [showBankPayment, setShowBankPayment] = useState(false);
-  const [selectedNumberFromRoulette, setSelectedNumberFromRoulette] = useState<number | null>(null);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const paymentConfig = usePaymentConfig();
   const [currentWinner, setCurrentWinner] = useState<Winner | null>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [showSplash, setShowSplash] = useState(false);
-  const [showBolillero, setShowBolillero] = useState(false);
-  const [isDrawing, setIsDrawing] = useState(false);
+  const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
 
   const room = useSupabaseRoom(selectedRoom);
 
@@ -45,34 +42,27 @@ function App() {
   }, [room.isComplete, room.isLoading]);
 
   const handleRaffleComplete = async () => {
-    setShowBolillero(true);
-    setIsDrawing(true);
-    
-    // Esperar la animación del bolillero
-    setTimeout(async () => {
-      const winnerNumber = await room.selectWinner();
-      if (winnerNumber?.owner) {
-        const winnerData: Winner = {
-          id: Date.now().toString(),
-          roomType: selectedRoom,
-          roomName: room.roomConfig.name,
-          number: winnerNumber.number,
-          playerName: winnerNumber.owner.fullName,
-          playerDNI: winnerNumber.owner.dni,
-          prize: room.roomConfig.prize,
-          date: new Date().toISOString(),
-          timestamp: Date.now()
-        };
-        
-        setCurrentWinner(winnerData);
-        await addWinner(winnerData);
-        setIsDrawing(false);
-        
-        setTimeout(() => {
-          setShowWinner(true);
-        }, 2000);
-      }
-    }, 4000);
+    const winnerNumber = await room.selectWinner();
+    if (winnerNumber?.owner) {
+      const winnerData: Winner = {
+        id: Date.now().toString(),
+        roomType: selectedRoom,
+        roomName: room.roomConfig.name,
+        number: winnerNumber.number,
+        playerName: winnerNumber.owner.fullName,
+        playerDNI: winnerNumber.owner.dni,
+        prize: room.roomConfig.prize,
+        date: new Date().toISOString(),
+        timestamp: Date.now()
+      };
+      
+      setCurrentWinner(winnerData);
+      await addWinner(winnerData);
+      
+      setTimeout(() => {
+        setShowWinner(true);
+      }, 1000);
+    }
   };
 
   const handleProfileSubmit = async (newProfile: any) => {
@@ -80,39 +70,14 @@ function App() {
     setShowRegistration(false);
   };
 
-  const handleNumberSelect = (num: any) => {
-    if (!user) {
-      setShowRegistration(true);
-      return;
-    }
-    setSelectedNumber(num);
-    setShowPayment(true);
-  };
-
-  const handlePaymentConfirm = async () => {
-    if (selectedNumber && user) {
-      await room.reserveNumber(selectedNumber.number, user.dni);
-      setShowPayment(false);
-      setSelectedNumber(null);
-    }
-  };
-
   const handleRouletteSelect = (number: number) => {
-    setSelectedNumberFromRoulette(number);
-    setSelectedNumber({ number, status: 'available' });
+    setSelectedNumber(number);
     setShowBankPayment(true);
   };
 
-  const handlePaymentCancel = () => {
-    setShowPayment(false);
-    setSelectedNumber(null);
-  };
-
-  const handleResetRoom = () => {
-    room.resetRoom();
-    setShowWinner(false);
-    setShowBolillero(false);
-    setCurrentWinner(null);
+  const handleAdminLogin = () => {
+    setIsAdmin(true);
+    setIsAdminPanelOpen(true);
   };
 
   const occupiedCounts = {
@@ -133,8 +98,6 @@ function App() {
 
   return (
     <>
-      {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
-      
       <div className="min-h-screen text-white overflow-x-hidden" style={{ background: 'linear-gradient(135deg, #0f0518 0%, #1a0a3e 50%, #0f0518 100%)' }}>
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-violet-600/20 rounded-full blur-[180px]" />
@@ -148,11 +111,12 @@ function App() {
               
               <div className="hidden md:flex items-center gap-4">
                 <button
-                  onClick={() => setIsAdminPanelOpen(true)}
+                  onClick={() => isAdmin ? setIsAdminPanelOpen(true) : setShowAdminLogin(true)}
                   className="text-xs text-white/30 hover:text-white/60 px-2 py-1 rounded border border-white/10"
                 >
-                  Admin
+                  {isAdmin ? 'Panel Admin' : 'Admin'}
                 </button>
+                
                 {user ? (
                   <>
                     <span className="text-sm text-white/60">Hola, {user.fullName.split(' ')[0]}</span>
@@ -160,7 +124,7 @@ function App() {
                   </>
                 ) : (
                   <Button onClick={() => setShowRegistration(true)} className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold">
-                    <User className="w-4 h-4 mr-2" />Registrarse
+                    <User className="w-4 h-4 mr-2" />Entrar
                   </Button>
                 )}
               </div>
@@ -173,17 +137,10 @@ function App() {
         </header>
 
         <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Panel de Admin */}
-          {isAdminPanelOpen && (
-            <AdminPanel isOpen={isAdminPanelOpen} onClose={() => setIsAdminPanelOpen(false)} />
-          )}
-
-          {/* Winners */}
           <div className="mb-8">
             <WinnersCompact winners={winners.slice(0, 5)} />
           </div>
 
-          {/* Room Selector */}
           <div className="mb-8">
             <RoomSelector 
               selectedRoom={selectedRoom} 
@@ -192,18 +149,6 @@ function App() {
             />
           </div>
 
-          {/* Casino Bolillero */}
-          <div className="mb-8">
-            <CasinoBolillero
-              availableNumbers={room.numbers.filter(n => n.status === 'available').map(n => n.number)}
-              totalNumbers={room.roomConfig.maxPlayers}
-              onNumberSelected={handleRouletteSelect}
-              roomColor={room.roomConfig.color}
-              roomName={room.roomConfig.name}
-            />
-          </div>
-
-          {/* Room Info */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -225,14 +170,23 @@ function App() {
             </p>
           </motion.div>
 
-          {/* Grid */}
+          <div className="mb-8">
+            <CasinoBolillero
+              availableNumbers={room.numbers.filter(n => n.status === 'available').map(n => n.number)}
+              totalNumbers={room.roomConfig.maxPlayers}
+              onNumberSelected={handleRouletteSelect}
+              roomColor={room.roomConfig.color}
+              roomName={room.roomConfig.name}
+            />
+          </div>
+
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <NumberGrid
                 numbers={room.numbers}
-                onSelectNumber={handleNumberSelect}
+                onSelectNumber={() => {}}
                 occupiedCount={room.occupiedCount}
-                reservedCount={room.reservedCount}
+                reservedCount={0}
                 progress={room.progress}
                 isComplete={room.isComplete}
                 roomColor={room.roomConfig.color}
@@ -247,7 +201,7 @@ function App() {
                       profile={user}
                       onEdit={() => setShowRegistration(true)}
                       onLogout={logout}
-                      userNumbers={room.userNumbers}
+                      userNumbers={[]}
                       roomConfig={room.roomConfig}
                     />
                   </motion.div>
@@ -285,9 +239,25 @@ function App() {
           </div>
         </main>
 
-        <RegistrationForm isOpen={showRegistration} onSubmit={handleProfileSubmit} onCancel={user ? () => setShowRegistration(false) : undefined} />
-        
-        {/* Modal de Pago por Transferencia */}
+        <AuthModal 
+          isOpen={showRegistration} 
+          onClose={() => setShowRegistration(false)} 
+          onLogin={handleProfileSubmit}
+        />
+
+        <AdminLogin
+          isOpen={showAdminLogin}
+          onClose={() => setShowAdminLogin(false)}
+          onLogin={handleAdminLogin}
+        />
+
+        {isAdmin && (
+          <AdminPanel 
+            isOpen={isAdminPanelOpen} 
+            onClose={() => setIsAdminPanelOpen(false)} 
+          />
+        )}
+
         {showBankPayment && selectedNumber && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
             <motion.div 
@@ -296,13 +266,8 @@ function App() {
               className="bg-gradient-to-b from-[#1a0a3e] to-[#0f0518] rounded-2xl p-6 max-w-md w-full border border-white/20"
             >
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-white">Pagar Número #{selectedNumber.number}</h3>
-                <button 
-                  onClick={() => setShowBankPayment(false)}
-                  className="text-white/60 hover:text-white"
-                >
-                  ✕
-                </button>
+                <h3 className="text-xl font-bold text-white">Pagar Número #{selectedNumber}</h3>
+                <button onClick={() => setShowBankPayment(false)} className="text-white/60 hover:text-white">✕</button>
               </div>
               
               <BankTransferPayment
@@ -320,22 +285,16 @@ function App() {
             </motion.div>
           </div>
         )}
-        
-        <PaymentModal
-          isOpen={showPayment}
-          onClose={() => { setShowPayment(false); setSelectedNumber(null); }}
-          selectedNumber={selectedNumber}
-          userProfile={user!}
-          roomConfig={room.roomConfig}
-          onConfirmPayment={handlePaymentConfirm}
-          onCancel={handlePaymentCancel}
-        />
 
         <WinnerAnimation
           isOpen={showWinner}
           onClose={() => setShowWinner(false)}
           winner={currentWinner}
-          onReset={handleResetRoom}
+          onReset={() => {
+            room.resetRoom();
+            setShowWinner(false);
+            setCurrentWinner(null);
+          }}
         />
       </div>
     </>

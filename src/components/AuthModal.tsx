@@ -13,16 +13,14 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
-  const [mode, setMode] = useState\u003c'login' | 'register'\u003e('login');
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   
-  // Login
   const [loginDni, setLoginDni] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   
-  // Register
   const [registerData, setRegisterData] = useState({
     fullName: '',
     dni: '',
@@ -94,7 +92,6 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
         return;
       }
       
-      // Login automático después de registrar
       const { data: loginData } = await supabase
         .rpc('verify_user', {
           p_dni: registerData.dni,
@@ -121,7 +118,6 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
         animate={{ opacity: 1, scale: 1 }}
         className="bg-gradient-to-b from-[#1a0a3e] to-[#0f0518] rounded-2xl w-full max-w-md border border-white/20 overflow-hidden"
       >
-        {/* Tabs */}
         <div className="flex border-b border-white/10">
           <button
             onClick={() => { setMode('login'); setError(''); }}
@@ -309,7 +305,6 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
   );
 }
 
-// Login para Admin
 interface AdminLoginProps {
   isOpen: boolean;
   onClose: () => void;
@@ -379,9 +374,9 @@ export function AdminLogin({ isOpen, onClose, onLogin }: AdminLoginProps) {
             />
           </div>
 
-          \u003cdiv\u003e
-            \u003cLabel className="text-white/60 text-sm"\u003eContraseña\u003c/Label\u003e
-            \u003cInput
+          <div>
+            <Label className="text-white/60 text-sm">Contraseña</Label>
+            <Input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -389,50 +384,33 @@ export function AdminLogin({ isOpen, onClose, onLogin }: AdminLoginProps) {
               required
               className="bg-white/5 border-white/10 text-white"
             />
-          \u003c/div\u003e
+          </div>
 
           {error && (
-            \u003cdiv className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm">
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm">
               {error}
-            \u003c/div\u003e
+            </div>
           )}
 
-          \u003cdiv className="flex gap-3">
-            \u003cButton 
+          <div className="flex gap-3">
+            <Button 
               type="button"
               variant="outline"
               onClick={onClose}
               className="flex-1 border-white/20 text-white"
-            \u003e
+            >
               Cancelar
-            \u003c/Button\u003e
-            \u003cButton 
+            </Button>
+            <Button 
               type="submit"
               disabled={isLoading}
               className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-            \u003e
+            >
               {isLoading ? 'Verificando...' : 'Entrar'}
-            \u003c/Button\u003e
-          \u003c/div\u003e
-        \u003c/form\u003e
-      \u003c/motion.div\u003e
-    \u003c/div\u003e
+            </Button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
   );
-}
-
-// Hook para verificar si está logueado como admin
-export function useAdminAuth() {
-  const [isAdmin, setIsAdmin] = useState(false);
-  
-  useEffect(() => {
-    const session = localStorage.getItem('rifaflash_admin_session');
-    setIsAdmin(session === 'true');
-  }, []);
-  
-  const logout = () => {
-    localStorage.removeItem('rifaflash_admin_session');
-    setIsAdmin(false);
-  };
-  
-  return { isAdmin, logout };
 }
