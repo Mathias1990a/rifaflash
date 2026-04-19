@@ -119,7 +119,7 @@ function App() {
                 
                 {user ? (
                   <>
-                    <span className="text-sm text-white/60">Hola, {user.fullName.split(' ')[0]}</span>
+                    <span className="text-sm text-white/60">Hola, {user.fullName?.split(' ')[0] || 'Usuario'}</span>
                     <Button variant="ghost" size="sm" onClick={logout} className="text-white/60 hover:text-white">Cerrar sesión</Button>
                   </>
                 ) : (
