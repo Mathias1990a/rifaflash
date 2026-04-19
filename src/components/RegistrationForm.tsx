@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, CreditCard, Phone, FileText, Sparkles, X } from 'lucide-react';
+import { User, CreditCard, Phone, FileText, Sparkles, X, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -8,18 +8,22 @@ import { UserProfile } from '../types';
 
 interface RegistrationFormProps {
   isOpen: boolean;
-  onSubmit: (profile: UserProfile) => void;
+  onSubmit: (profile: UserProfile & { password: string }) => void;
   onCancel?: () => void;
 }
 
 export function RegistrationForm({ isOpen, onSubmit, onCancel }: RegistrationFormProps) {
-  const [formData, setFormData] = useState<UserProfile>({
+  const [formData, setFormData] = useState({
     fullName: '',
     dni: '',
     phone: '',
-    cvuAlias: ''
+    cvuAlias: '',
+    password: '',
+    confirmPassword: ''
   });
-  const [errors, setErrors] = useState<Partial<Record<keyof UserProfile, string>>>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof typeof formData, string>>>({});
 
   const formatDNI = (value: string) => {
     const cleaned = value.replace(/\D/g, '');
@@ -59,6 +63,14 @@ export function RegistrationForm({ isOpen, onSubmit, onCancel }: RegistrationFor
       newErrors.cvuAlias = 'CVU o Alias inválido';
     }
 
+    if (!formData.password || formData.password.length < 6) {
+      newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Las contraseñas no coinciden';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -66,8 +78,14 @@ export function RegistrationForm({ isOpen, onSubmit, onCancel }: RegistrationFor
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit(formData);
-      setFormData({ fullName: '', dni: '', phone: '', cvuAlias: '' });
+      onSubmit({
+        fullName: formData.fullName,
+        dni: formData.dni,
+        phone: formData.phone,
+        cvuAlias: formData.cvuAlias,
+        password: formData.password
+      });
+      setFormData({ fullName: '', dni: '', phone: '', cvuAlias: '', password: '', confirmPassword: '' });
     }
   };
 
@@ -183,6 +201,60 @@ export function RegistrationForm({ isOpen, onSubmit, onCancel }: RegistrationFor
               />
               {errors.cvuAlias && (
                 <p className="text-xs text-red-400">{errors.cvuAlias}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="flex items-center gap-2 text-white/80">
+                <Lock className="w-4 h-4 text-violet-400" />
+                Contraseña
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className={errors.password ? "border-red-500 pr-10" : "border-white/10 pr-10"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-xs text-red-400">{errors.password}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="flex items-center gap-2 text-white/80">
+                <Lock className="w-4 h-4 text-violet-400" />
+                Confirmar Contraseña
+              </Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="••••••"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  className={errors.confirmPassword ? "border-red-500 pr-10" : "border-white/10 pr-10"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="text-xs text-red-400">{errors.confirmPassword}</p>
               )}
             </div>
 

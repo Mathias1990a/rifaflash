@@ -15,34 +15,26 @@ export function useSupabaseUser() {
     setIsLoading(false);
   }, []);
 
-  const registerUser = async (profile: UserProfile) => {
+  const registerUser = async (profile: UserProfile & { password?: string }) => {
     try {
-      // Verificar si existe
-      let { data: existing } = await supabase
-        .from('users')
-        .select('*')
-        .eq('dni', profile.dni)
-        .single();
-
-      if (!existing) {
-        const { data, error } = await supabase
-          .from('users')
-          .insert([{
-            full_name: profile.fullName,
-            dni: profile.dni,
-            phone: profile.phone,
-            cvu_alias: profile.cvuAlias
-          }])
-          .select()
-          .single();
-        
-        if (error) throw error;
-        existing = data;
+      // Usar la función RPC para crear usuario con contraseña
+      const { data: userId, error } = await supabase
+        .rpc('create_user_with_password', {
+          p_full_name: profile.fullName,
+          p_dni: profile.dni,
+          p_phone: profile.phone,
+          p_cvu_alias: profile.cvuAlias,
+          p_password: profile.password || '123456'
+        });
+      
+      if (error) {
+        console.error('Error creating user:', error);
+        throw error;
       }
 
       localStorage.setItem('rifaflash_user', JSON.stringify(profile));
       setUser(profile);
-      return existing;
+      return { id: userId, ...profile };
     } catch (error) {
       console.error('Error registering user:', error);
       throw error;
