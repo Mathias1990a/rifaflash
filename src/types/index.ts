@@ -67,6 +67,10 @@ export interface UserProfile {
   phone: string;
   cvuAlias: string;
   password?: string;
+  referralCode?: string;
+  referredBy?: string;
+  gameBalance?: number;
+  hasMadeFirstPurchase?: boolean;
 }
 
 export type NumberStatus = 'available' | 'reserved' | 'occupied';

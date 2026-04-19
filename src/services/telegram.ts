@@ -11,7 +11,7 @@ export interface PaymentNotification {
   userCvuAlias: string;
   number: number;
   amount: number;
-  paymentMethod: 'uala' | 'mercadopago';
+  paymentMethod: 'uala' | 'mercadopago' | 'transfer';
   timestamp: Date;
 }
 
@@ -20,6 +20,14 @@ export interface PaymentConfirmation {
   confirmed: boolean;
   confirmedBy?: string;
   confirmedAt?: Date;
+}
+
+export interface TransferPaymentData {
+  senderName: string;
+  senderCbu: string;
+  date: string;
+  amount: number;
+  notes?: string;
 }
 
 // Almacenar callbacks para confirmaciones de pago
@@ -37,7 +45,7 @@ export const TelegramService = {
 💳 *CVU/Alias:* ${notification.userCvuAlias}
 🔢 *Número:* #${notification.number.toString().padStart(2, '0')}
 💰 *Monto:* $${notification.amount.toLocaleString()} ARS
-💵 *Método:* ${notification.paymentMethod === 'uala' ? 'Ualá Bis' : 'Mercado Pago'}
+💵 *Método:* ${notification.paymentMethod === 'uala' ? 'Ualá Bis' : notification.paymentMethod === 'mercadopago' ? 'Mercado Pago' : 'Transferencia'}
 ⏰ *Fecha:* ${notification.timestamp.toLocaleString('es-AR')}
 
 ⚡ *Acción requerida:*
@@ -62,7 +70,167 @@ Verificar el pago y responder con:
       return data.ok;
     } catch (error) {
       console.error('❌ Error enviando mensaje a Telegram:', error);
-      // Fallback: mostrar en consola para demo
+      console.log('📨 Mensaje que se enviaría:', message);
+      return true;
+    }
+  },
+
+  // Enviar notificación de pago por transferencia
+  async notifyTransferPayment(
+    userName: string,
+    userDNI: string,
+    number: number,
+    amount: number,
+    transferData: TransferPaymentData
+  ): Promise<boolean> {
+    const message = `
+💸 *NUEVO PAGO POR TRANSFERENCIA - RIFAFLASH* 💸
+
+👤 *Cliente:* ${userName}
+🆔 *DNI:* ${userDNI}
+🔢 *Número:* #${number.toString().padStart(2, '0')}
+💰 *Monto:* $${amount.toLocaleString()} ARS
+
+📋 *Datos de la transferencia:*
+• *Nombre:* ${transferData.senderName}
+• *CBU/CVU:* ${transferData.senderCbu}
+• *Fecha:* ${transferData.date}
+• *Notas:* ${transferData.notes || 'Sin notas'}
+
+⚡ *Acción requerida:*
+Verificar en tu banco y aprobar desde el panel de admin.
+    `.trim();
+
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message,
+          parse_mode: 'Markdown'
+        })
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('❌ Error enviando mensaje a Telegram:', error);
+      console.log('📨 Mensaje que se enviaría:', message);
+      return true;
+    }
+  },
+
+  // Enviar log de registro de nuevo usuario
+  async notifyNewUserRegistration(userData: {
+    fullName: string;
+    dni: string;
+    phone: string;
+    cvuAlias: string;
+    referralCode?: string;
+    referredBy?: string;
+  }): Promise<boolean> {
+    const message = `
+📝 *NUEVO USUARIO REGISTRADO - RIFAFLASH* 📝
+
+👤 *Nombre:* ${userData.fullName}
+🆔 *DNI:* ${userData.dni}
+📱 *Teléfono:* ${userData.phone}
+💳 *CVU/Alias:* ${userData.cvuAlias}
+${userData.referredBy ? `🎁 *Referido por:* ${userData.referredBy}` : ''}
+${userData.referralCode ? `🔗 *Código de referido:* ${userData.referralCode}` : ''}
+
+⏰ *Fecha:* ${new Date().toLocaleString('es-AR')}
+    `.trim();
+
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message,
+          parse_mode: 'Markdown'
+        })
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('❌ Error enviando mensaje a Telegram:', error);
+      console.log('📨 Mensaje que se enviaría:', message);
+      return true;
+    }
+  },
+
+  // Enviar log de referido exitoso
+  async notifyReferralSuccess(referrerName: string, referredName: string, bonusAmount: number): Promise<boolean> {
+    const message = `
+🎉 *NUEVO REFERIDO EXITOSO - RIFAFLASH* 🎉
+
+👤 *Referente:* ${referrerName}
+🎁 *Referido:* ${referredName}
+💰 *Bono ganado:* $${bonusAmount.toLocaleString()} ARS (solo para jugar)
+
+✅ El referido completó su primera compra.
+💎 El bono se acreditó al saldo de juego del referente.
+
+⏰ *Fecha:* ${new Date().toLocaleString('es-AR')}
+    `.trim();
+
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message,
+          parse_mode: 'Markdown'
+        })
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('❌ Error enviando mensaje a Telegram:', error);
+      console.log('📨 Mensaje que se enviaría:', message);
+      return true;
+    }
+  },
+
+  // Enviar log de pago aprobado/rechazado
+  async notifyPaymentStatus(
+    userName: string,
+    number: number,
+    amount: number,
+    status: 'approved' | 'rejected',
+    adminName?: string
+  ): Promise<boolean> {
+    const statusEmoji = status === 'approved' ? '✅' : '❌';
+    const statusText = status === 'approved' ? 'APROBADO' : 'RECHAZADO';
+    
+    const message = `
+${statusEmoji} *PAGO ${statusText} - RIFAFLASH* ${statusEmoji}
+
+👤 *Cliente:* ${userName}
+🔢 *Número:* #${number.toString().padStart(2, '0')}
+💰 *Monto:* $${amount.toLocaleString()} ARS
+${adminName ? `👨‍💼 *Admin:* ${adminName}` : ''}
+
+⏰ *Fecha:* ${new Date().toLocaleString('es-AR')}
+    `.trim();
+
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message,
+          parse_mode: 'Markdown'
+        })
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('❌ Error enviando mensaje a Telegram:', error);
       console.log('📨 Mensaje que se enviaría:', message);
       return true;
     }

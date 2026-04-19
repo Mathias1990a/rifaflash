@@ -7,7 +7,11 @@ import {
   LogOut,
   Trophy,
   Ticket,
-  Zap
+  Zap,
+  Gift,
+  Wallet,
+  Copy,
+  Users
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -24,6 +28,13 @@ interface UserProfileCardProps {
 export function UserProfileCard({ profile, onEdit, onLogout, userNumbers, roomConfig }: UserProfileCardProps) {
   const occupiedCount = userNumbers.filter(n => n.status === 'occupied').length;
   const reservedCount = userNumbers.filter(n => n.status === 'reserved').length;
+
+  const copyReferralCode = () => {
+    if (profile.referralCode) {
+      navigator.clipboard.writeText(profile.referralCode);
+      alert('¡Código copiado! Compartilo con tus amigos.');
+    }
+  };
 
   return (
     <Card className="border-violet-500/20 bg-gradient-to-br from-violet-600/10 to-transparent">
@@ -50,6 +61,45 @@ export function UserProfileCard({ profile, onEdit, onLogout, userNumbers, roomCo
       </CardHeader>
       
       <CardContent className="space-y-4">
+        {/* Saldo de juego */}
+        {profile.gameBalance > 0 && (
+          <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-lg p-4 border border-yellow-500/30">
+            <div className="flex items-center gap-2 text-yellow-400 text-sm mb-1">
+              <Wallet className="w-4 h-4" />
+              Saldo para jugar
+            </div>
+            <p className="text-2xl font-bold text-white">${profile.gameBalance?.toLocaleString()}</p>
+            <p className="text-xs text-white/50 mt-1">Solo válido para comprar números</p>
+          </div>
+        )}
+
+        {/* Código de referido */}
+        {profile.referralCode && (
+          <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg p-4 border border-green-500/20">
+            <div className="flex items-center gap-2 text-green-400 text-sm mb-2">
+              <Gift className="w-4 h-4" />
+              Tu código de referido
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 bg-black/30 px-3 py-2 rounded-lg text-lg font-mono text-white">
+                {profile.referralCode}
+              </code>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={copyReferralCode}
+                className="text-green-400 hover:text-green-300"
+              >
+                <Copy className="w-4 h-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-white/50 mt-2">
+              Compartí este código con tus amigos. Cuando se registren y compren un número, 
+              <span className="text-green-400 font-semibold"> vos ganás $3.000</span> para jugar.
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white/5 rounded-lg p-3 border border-white/5">
             <div className="flex items-center gap-2 text-white/50 text-xs mb-1">

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, CreditCard, Phone, FileText, Sparkles, X, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, CreditCard, Phone, FileText, Sparkles, X, Lock, Eye, EyeOff, Gift, Users } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -19,7 +19,8 @@ export function RegistrationForm({ isOpen, onSubmit, onCancel }: RegistrationFor
     phone: '',
     cvuAlias: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    referralCode: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -43,7 +44,7 @@ export function RegistrationForm({ isOpen, onSubmit, onCancel }: RegistrationFor
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof UserProfile, string>> = {};
+    const newErrors: Partial<Record<keyof typeof formData, string>> = {};
 
     if (!formData.fullName.trim() || formData.fullName.length < 3) {
       newErrors.fullName = 'Ingresa tu nombre completo';
@@ -83,9 +84,10 @@ export function RegistrationForm({ isOpen, onSubmit, onCancel }: RegistrationFor
         dni: formData.dni,
         phone: formData.phone,
         cvuAlias: formData.cvuAlias,
-        password: formData.password
+        password: formData.password,
+        referredBy: formData.referralCode || undefined
       });
-      setFormData({ fullName: '', dni: '', phone: '', cvuAlias: '', password: '', confirmPassword: '' });
+      setFormData({ fullName: '', dni: '', phone: '', cvuAlias: '', password: '', confirmPassword: '', referralCode: '' });
     }
   };
 
@@ -105,7 +107,7 @@ export function RegistrationForm({ isOpen, onSubmit, onCancel }: RegistrationFor
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-md bg-gradient-to-b from-[#1a0a3e] to-[#0f0518] rounded-2xl border border-violet-500/30 p-6 shadow-2xl"
+          className="w-full max-w-md bg-gradient-to-b from-[#1a0a3e] to-[#0f0518] rounded-2xl border border-violet-500/30 p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
         >
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -131,6 +133,20 @@ export function RegistrationForm({ isOpen, onSubmit, onCancel }: RegistrationFor
                 <X className="w-5 h-5 text-white/60" />
               </button>
             )}
+          </div>
+
+          {/* Banner de referidos */}
+          <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30">
+            <div className="flex items-start gap-3">
+              <Gift className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-yellow-300">¡Referí y ganá!</p>
+                <p className="text-xs text-white/70 mt-1">
+                  Si te registrás con un código de referido y comprás un número, 
+                  <span className="text-yellow-400 font-semibold"> tu referido gana $3.000</span> para jugar.
+                </p>
+              </div>
+            </div>
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -205,6 +221,23 @@ export function RegistrationForm({ isOpen, onSubmit, onCancel }: RegistrationFor
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="referralCode" className="flex items-center gap-2 text-white/80">
+                <Users className="w-4 h-4 text-yellow-400" />
+                Código de Referido <span className="text-white/40 text-xs">(opcional)</span>
+              </Label>
+              <Input
+                id="referralCode"
+                placeholder="Ej: REF123"
+                value={formData.referralCode}
+                onChange={(e) => setFormData({ ...formData, referralCode: e.target.value.toUpperCase() })}
+                className="border-yellow-500/30 focus:border-yellow-500/50"
+              />
+              <p className="text-xs text-white/50">
+                Si tenés un código de un amigo, ingresalo acá.
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="password" className="flex items-center gap-2 text-white/80">
                 <Lock className="w-4 h-4 text-violet-400" />
                 Contraseña
@@ -264,7 +297,7 @@ export function RegistrationForm({ isOpen, onSubmit, onCancel }: RegistrationFor
                 size="lg" 
                 className="w-full bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-500 hover:to-violet-700"
               >
-                Guardar Perfil
+                Crear Cuenta
               </Button>
               {onCancel && (
                 <Button 

@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { supabase } from '../services/supabase';
+import { TelegramService } from '../services/telegram';
 
 interface PaymentConfig {
   alias: string;
@@ -51,29 +52,32 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   }, []);
 
   const loadPayments = async () => {
-    const { data } = await supabase
-      .from('payments')
-      .select(`
-        *,
-        user:users(full_name, dni)
-      `)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
-    
-    if (data) {
-      setPayments(data.map((p: any) => ({
-        id: p.id,
-        user_name: p.user?.full_name,
-        user_dni: p.user?.dni,
-        room_name: p.room_id,
-        number: p.number,
-        amount: p.amount,
-        sender_name: p.sender_name || '',
-        sender_cbu: p.sender_cbu || '',
-        date: p.date,
-        notes: p.notes,
-        created_at: p.created_at
-      })));
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .rpc('get_pending_payments');
+      
+      if (error) throw error;
+      
+      if (data) {
+        setPayments(data.map((p: any) => ({
+          id: p.id,
+          user_name: p.user_name,
+          user_dni: p.user_dni,
+          room_name: p.room_name,
+          number: p.number,
+          amount: p.amount,
+          sender_name: p.sender_name || '',
+          sender_cbu: p.sender_cbu || '',
+          date: p.transfer_date,
+          notes: p.notes,
+          created_at: p.created_at
+        })));
+      }
+    } catch (error) {
+      console.error('Error cargando pagos:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -83,23 +87,66 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   };
 
   const approvePayment = async (paymentId: string) => {
-    await supabase
-      .from('payments')
-      .update({ status: 'approved', verified_at: new Date().toISOString() })
-      .eq('id', paymentId);
-    
-    await loadPayments();
-    alert('Pago aprobado');
+    try {
+      // Obtener admin_id del localStorage o session
+      const { data, error } = await supabase
+        .rpc('approve_payment', {
+          p_payment_id: paymentId,
+          p_admin_id: '00000000-0000-0000-0000-000000000000' // TODO: usar admin real
+        });
+      
+      if (error) throw error;
+      
+      if (data) {
+        // Notificar a Telegram
+        const payment = payments.find(p => p.id === paymentId);
+        if (payment) {
+          await TelegramService.notifyPaymentStatus(
+            payment.user_name,
+            payment.number,
+            payment.amount,
+            'approved'
+          );
+        }
+        
+        await loadPayments();
+        alert('Pago aprobado correctamente');
+      }
+    } catch (error) {
+      console.error('Error aprobando pago:', error);
+      alert('Error al aprobar el pago');
+    }
   };
 
   const rejectPayment = async (paymentId: string) => {
-    await supabase
-      .from('payments')
-      .update({ status: 'rejected' })
-      .eq('id', paymentId);
-    
-    await loadPayments();
-    alert('Pago rechazado');
+    try {
+      const { data, error } = await supabase
+        .rpc('reject_payment', {
+          p_payment_id: paymentId,
+          p_admin_id: '00000000-0000-0000-0000-000000000000' // TODO: usar admin real
+        });
+      
+      if (error) throw error;
+      
+      if (data) {
+        // Notificar a Telegram
+        const payment = payments.find(p => p.id === paymentId);
+        if (payment) {
+          await TelegramService.notifyPaymentStatus(
+            payment.user_name,
+            payment.number,
+            payment.amount,
+            'rejected'
+          );
+        }
+        
+        await loadPayments();
+        alert('Pago rechazado');
+      }
+    } catch (error) {
+      console.error('Error rechazando pago:', error);
+      alert('Error al rechazar el pago');
+    }
   };
 
   if (!isOpen) return null;

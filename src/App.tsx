@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, User, Sparkles, Trophy, MessageCircle, Zap } from 'lucide-react';
+import { Menu, X, User, Sparkles, Trophy, MessageCircle, Zap, Wallet } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { RegistrationForm } from './components/RegistrationForm';
 import { WinnerAnimation } from './components/WinnerAnimation';
@@ -12,6 +12,7 @@ import { CasinoBolillero } from './components/CasinoBolillero';
 import { BankTransferPayment } from './components/BankTransferPayment';
 import { AdminPanel, usePaymentConfig } from './components/AdminPanel';
 import { AuthModal, AdminLogin } from './components/AuthModal';
+import { PurchaseModal } from './components/PurchaseModal';
 import { Logo } from './components/Logo';
 import { useSupabaseUser, useSupabaseRoom, useSupabaseWinners } from './hooks/useSupabase';
 import { RoomType, Winner } from './types';
@@ -32,6 +33,7 @@ function App() {
   const [currentWinner, setCurrentWinner] = useState<Winner | null>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   const room = useSupabaseRoom(selectedRoom);
 
@@ -71,8 +73,12 @@ function App() {
   };
 
   const handleRouletteSelect = (number: number) => {
+    if (!user) {
+      setShowRegistration(true);
+      return;
+    }
     setSelectedNumber(number);
-    setShowBankPayment(true);
+    setShowPurchaseModal(true);
   };
 
   const handleAdminLogin = () => {
@@ -119,6 +125,14 @@ function App() {
                 
                 {user ? (
                   <>
+                    {user.gameBalance > 0 && (
+                      <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-500/30">
+                        <Wallet className="w-3 h-3 text-yellow-400" />
+                        <span className="text-xs text-yellow-400 font-medium">
+                          ${user.gameBalance?.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
                     <span className="text-sm text-white/60">Hola, {user.fullName?.split(' ')[0] || 'Usuario'}</span>
                     <Button variant="ghost" size="sm" onClick={logout} className="text-white/60 hover:text-white">Cerrar sesión</Button>
                   </>
@@ -284,6 +298,24 @@ function App() {
               />
             </motion.div>
           </div>
+        )}
+
+        {showPurchaseModal && selectedNumber && user && (
+          <PurchaseModal
+            isOpen={showPurchaseModal}
+            onClose={() => setShowPurchaseModal(false)}
+            number={selectedNumber}
+            roomPrice={room.roomConfig.price}
+            roomName={room.roomConfig.name}
+            user={{
+              id: user.id || '',
+              fullName: user.fullName,
+              dni: user.dni
+            }}
+            onPurchaseSubmitted={() => {
+              // Recargar datos del usuario si es necesario
+            }}
+          />
         )}
 
         <WinnerAnimation
