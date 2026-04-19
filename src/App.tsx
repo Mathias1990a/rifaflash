@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, User, Sparkles, Trophy, MessageCircle, Zap, Wallet } from 'lucide-react';
+import { Menu, X, User, Sparkles, Trophy, MessageCircle, Zap, Wallet, ShoppingCart } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { RegistrationForm } from './components/RegistrationForm';
 import { WinnerAnimation } from './components/WinnerAnimation';
@@ -13,6 +13,7 @@ import { BankTransferPayment } from './components/BankTransferPayment';
 import { AdminPanel, usePaymentConfig } from './components/AdminPanel';
 import { AuthModal, AdminLogin } from './components/AuthModal';
 import { PurchaseModal } from './components/PurchaseModal';
+import { MultiPurchaseModal } from './components/MultiPurchaseModal';
 import { Logo } from './components/Logo';
 import { useSupabaseUser, useSupabaseRoom, useSupabaseWinners, useAllRoomsOccupiedCount } from './hooks/useSupabase';
 import { RoomType, Winner } from './types';
@@ -34,7 +35,9 @@ function App() {
   const [currentWinner, setCurrentWinner] = useState<Winner | null>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
+  const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [showMultiPurchaseModal, setShowMultiPurchaseModal] = useState(false);
 
   const room = useSupabaseRoom(selectedRoom);
 
@@ -78,8 +81,18 @@ function App() {
       setShowRegistration(true);
       return;
     }
-    setSelectedNumber(number);
-    setShowPurchaseModal(true);
+    // Agregar número al carrito si no está ya
+    setSelectedNumbers(prev => {
+      if (prev.includes(number)) {
+        return prev; // Ya está en el carrito
+      }
+      return [...prev, number];
+    });
+    setShowMultiPurchaseModal(true);
+  };
+
+  const handleRemoveFromCart = (number: number) => {
+    setSelectedNumbers(prev => prev.filter(n => n !== number));
   };
 
   const handleAdminLogin = () => {
@@ -120,6 +133,19 @@ function App() {
                 
                 {user ? (
                   <>
+                    {/* Carrito de compras */}
+                    {selectedNumbers.length > 0 && (
+                      <button
+                        onClick={() => setShowMultiPurchaseModal(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/20 border border-violet-500/40 hover:bg-violet-500/30 transition-colors"
+                      >
+                        <ShoppingCart className="w-4 h-4 text-violet-400" />
+                        <span className="text-sm font-medium text-violet-300">
+                          {selectedNumbers.length}
+                        </span>
+                      </button>
+                    )}
+                    
                     {user.gameBalance > 0 && (
                       <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-500/30">
                         <Wallet className="w-3 h-3 text-yellow-400" />
@@ -128,6 +154,7 @@ function App() {
                         </span>
                       </div>
                     )}
+                    
                     <span className="text-sm text-white/60">Hola, {user.fullName?.split(' ')[0] || 'Usuario'}</span>
                     <Button variant="ghost" size="sm" onClick={logout} className="text-white/60 hover:text-white">Cerrar sesión</Button>
                   </>
@@ -311,6 +338,32 @@ function App() {
             onPurchaseSubmitted={() => {
               // Recargar datos del usuario si es necesario
             }}
+          />
+        )}
+
+        {showMultiPurchaseModal && selectedNumbers.length > 0 && user && (
+          <MultiPurchaseModal
+            isOpen={showMultiPurchaseModal}
+            onClose={() => {
+              setShowMultiPurchaseModal(false);
+              if (selectedNumbers.length === 0) {
+                setSelectedNumbers([]);
+              }
+            }}
+            selectedNumbers={selectedNumbers}
+            roomPrice={room.roomConfig.price}
+            roomName={room.roomConfig.name}
+            roomId={selectedRoom}
+            user={{
+              id: user.id || '',
+              fullName: user.fullName,
+              dni: user.dni
+            }}
+            onPurchaseSubmitted={() => {
+              setSelectedNumbers([]);
+              setShowMultiPurchaseModal(false);
+            }}
+            onRemoveNumber={handleRemoveFromCart}
           />
         )}
 
