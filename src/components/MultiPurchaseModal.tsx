@@ -62,7 +62,28 @@ export function MultiPurchaseModal({
     setIsLoading(true);
 
     try {
-      // Crear pagos pendientes para cada número
+      // PRIMERO: Reservar los números inmediatamente
+      for (const number of selectedNumbers) {
+        const { error: reserveError } = await supabase
+          .from('numbers')
+          .update({
+            status: 'reserved',
+            user_id: user.id,
+            reserved_at: new Date().toISOString()
+          })
+          .eq('room_id', roomId)
+          .eq('number', number)
+          .eq('status', 'available'); // Solo si está disponible
+
+        if (reserveError) {
+          console.error('Error reservando número:', reserveError);
+          alert(`El número ${number} ya no está disponible`);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // DESPUÉS: Crear pagos pendientes para cada número
       for (const number of selectedNumbers) {
         const { error } = await supabase
           .rpc('create_pending_payment', {
@@ -97,8 +118,8 @@ export function MultiPurchaseModal({
       setStep(3); // Mostrar confirmación
       onPurchaseSubmitted();
     } catch (error) {
-      console.error('Error al crear pagos:', error);
-      alert('Error al procesar el pago. Intentá de nuevo.');
+      console.error('Error al procesar:', error);
+      alert('Error al procesar la compra. Intentá de nuevo.');
     } finally {
       setIsLoading(false);
     }

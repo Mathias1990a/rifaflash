@@ -55,16 +55,22 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .rpc('get_pending_payments');
+        .from('pending_payments')
+        .select(`
+          *,
+          user:users(full_name, dni)
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       
       if (data) {
         setPayments(data.map((p: any) => ({
           id: p.id,
-          user_name: p.user_name,
-          user_dni: p.user_dni,
-          room_name: p.room_name,
+          user_name: p.user?.full_name || 'N/A',
+          user_dni: p.user?.dni || 'N/A',
+          room_name: p.room_id,
           number: p.number,
           amount: p.amount,
           sender_name: p.sender_name || '',
