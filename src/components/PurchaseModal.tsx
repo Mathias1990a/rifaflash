@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { supabase } from '../services/supabase';
 import { TelegramService } from '../services/telegram';
+import { RoomType } from '../types';
 
 interface PurchaseModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface PurchaseModalProps {
   number: number;
   roomPrice: number;
   roomName: string;
+  roomId: RoomType;
   user: {
     id: string;
     fullName: string;
@@ -27,6 +29,7 @@ export function PurchaseModal({
   number, 
   roomPrice, 
   roomName,
+  roomId,
   user,
   onPurchaseSubmitted 
 }: PurchaseModalProps) {
@@ -54,7 +57,7 @@ export function PurchaseModal({
       const { data, error } = await supabase
         .rpc('create_pending_payment', {
           p_user_id: user.id,
-          p_room_id: 'standard', // TODO: obtener sala actual
+          p_room_id: roomId,
           p_number: number,
           p_amount: roomPrice,
           p_sender_name: transferData.senderName,

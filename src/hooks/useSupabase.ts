@@ -207,6 +207,61 @@ export function useSupabaseRoom(roomType: RoomType) {
   };
 }
 
+// Hook para obtener contadores de ocupación de todas las salas
+export function useAllRoomsOccupiedCount() {
+  const [occupiedCounts, setOccupiedCounts] = useState<Record<RoomType, number>>({
+    standard: 0,
+    premium: 0,
+    vip: 0
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadCounts = async () => {
+      const { data, error } = await supabase
+        .from('rooms')
+        .select('id, occupied_count');
+      
+      if (error) {
+        console.error('Error loading room counts:', error);
+        return;
+      }
+
+      const counts: Record<RoomType, number> = {
+        standard: 0,
+        premium: 0,
+        vip: 0
+      };
+
+      data?.forEach((room: any) => {
+        if (room.id in counts) {
+          counts[room.id as RoomType] = room.occupied_count || 0;
+        }
+      });
+
+      setOccupiedCounts(counts);
+      setIsLoading(false);
+    };
+
+    loadCounts();
+
+    // Suscribirse a cambios en tiempo real
+    const subscription = supabase
+      .channel('rooms-count')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'rooms' },
+        () => loadCounts()
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  return { occupiedCounts, isLoading };
+}
+
 export function useSupabaseWinners() {
   const [winners, setWinners] = useState<Winner[]>([]);
   const [isLoading, setIsLoading] = useState(true);

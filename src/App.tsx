@@ -14,13 +14,14 @@ import { AdminPanel, usePaymentConfig } from './components/AdminPanel';
 import { AuthModal, AdminLogin } from './components/AuthModal';
 import { PurchaseModal } from './components/PurchaseModal';
 import { Logo } from './components/Logo';
-import { useSupabaseUser, useSupabaseRoom, useSupabaseWinners } from './hooks/useSupabase';
+import { useSupabaseUser, useSupabaseRoom, useSupabaseWinners, useAllRoomsOccupiedCount } from './hooks/useSupabase';
 import { RoomType, Winner } from './types';
 import './index.css';
 
 function App() {
   const { user, isLoading: userLoading, registerUser, logout } = useSupabaseUser();
   const { winners, isLoading: winnersLoading, addWinner } = useSupabaseWinners();
+  const { occupiedCounts, isLoading: countsLoading } = useAllRoomsOccupiedCount();
   
   const [selectedRoom, setSelectedRoom] = useState<RoomType>('standard');
   const [showRegistration, setShowRegistration] = useState(false);
@@ -86,13 +87,7 @@ function App() {
     setIsAdminPanelOpen(true);
   };
 
-  const occupiedCounts = {
-    standard: room.occupiedCount,
-    premium: 0,
-    vip: 0
-  };
-
-  if (userLoading || room.isLoading || winnersLoading) {
+  if (userLoading || room.isLoading || winnersLoading || countsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4c1d95 0%, #6366f1 50%, #3b82f6 100%)' }}>
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
@@ -307,6 +302,7 @@ function App() {
             number={selectedNumber}
             roomPrice={room.roomConfig.price}
             roomName={room.roomConfig.name}
+            roomId={selectedRoom}
             user={{
               id: user.id || '',
               fullName: user.fullName,
