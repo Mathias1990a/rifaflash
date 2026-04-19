@@ -10,16 +10,16 @@ import {
 } from 'lucide-react';
 import { Progress } from './ui/progress';
 import { Card } from './ui/card';
-import { RaffleNumber } from '../types';
+import { RaffleNumber, RoomConfig } from '../types';
 
 interface NumberGridProps {
   numbers: RaffleNumber[];
-  onSelectNumber: (number: RaffleNumber) => void;
+  onSelectNumber: (number: number) => void;
   occupiedCount: number;
   reservedCount: number;
   progress: number;
   isComplete: boolean;
-  roomColor?: string;
+  roomConfig: RoomConfig;
 }
 
 export function NumberGrid({ 
@@ -28,7 +28,8 @@ export function NumberGrid({
   occupiedCount,
   reservedCount,
   progress,
-  isComplete
+  isComplete,
+  roomConfig
 }: NumberGridProps) {
   const [selectedForPreview, setSelectedForPreview] = useState<number | null>(null);
 
@@ -56,6 +57,8 @@ export function NumberGrid({
     }
   };
 
+  const availableCount = roomConfig.maxPlayers - occupiedCount - reservedCount;
+
   return (
     <div className="space-y-6">
       {/* Header Stats */}
@@ -65,7 +68,7 @@ export function NumberGrid({
             <Trophy className="w-4 h-4 text-yellow-400" />
             <span className="text-xs text-white/50">Premio</span>
           </div>
-          <p className="text-xl font-display text-gradient-gold">$100K</p>
+          <p className="text-xl font-display text-gradient-gold">${(roomConfig.prize / 1000).toFixed(0)}K</p>
         </Card>
         
         <Card className="p-4 text-center border-violet-500/20 bg-gradient-to-br from-violet-600/10 to-transparent">
@@ -73,7 +76,7 @@ export function NumberGrid({
             <Wallet className="w-4 h-4 text-violet-400" />
             <span className="text-xs text-white/50">Precio</span>
           </div>
-          <p className="text-xl font-display text-white">$3.000</p>
+          <p className="text-xl font-display text-white">${roomConfig.price.toLocaleString()}</p>
         </Card>
         
         <Card className="p-4 text-center border-violet-500/20 bg-gradient-to-br from-violet-600/10 to-transparent">
@@ -81,7 +84,7 @@ export function NumberGrid({
             <Users className="w-4 h-4 text-green-400" />
             <span className="text-xs text-white/50">Disponibles</span>
           </div>
-          <p className="text-xl font-display text-white">{50 - occupiedCount - reservedCount}</p>
+          <p className="text-xl font-display text-white">{availableCount}</p>
         </Card>
       </div>
 
@@ -90,7 +93,7 @@ export function NumberGrid({
         <div className="flex items-center justify-between text-sm">
           <span className="text-white/60">Progreso de la sala</span>
           <span className="font-medium text-white">
-            {occupiedCount}/50 <span className="text-white/50">vendidos</span>
+            {occupiedCount}/{roomConfig.maxPlayers} <span className="text-white/50">vendidos</span>
           </span>
         </div>
         <div className="relative">
@@ -108,7 +111,7 @@ export function NumberGrid({
         
         <div className="flex items-center justify-between text-xs text-white/40">
           <span>{reservedCount} reservados</span>
-          <span>Meta: 50 números</span>
+          <span>Meta: {roomConfig.maxPlayers} números</span>
         </div>
       </div>
 
@@ -139,7 +142,7 @@ export function NumberGrid({
               transition={{ delay: index * 0.01 }}
               whileHover={num.status === 'available' ? { scale: 1.1 } : {}}
               whileTap={num.status === 'available' ? { scale: 0.95 } : {}}
-              onClick={() => num.status === 'available' && onSelectNumber(num)}
+              onClick={() => num.status === 'available' && onSelectNumber(num.number)}
               onMouseEnter={() => setSelectedForPreview(num.number)}
               onMouseLeave={() => setSelectedForPreview(null)}
               disabled={num.status !== 'available'}

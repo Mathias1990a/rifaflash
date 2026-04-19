@@ -14,8 +14,10 @@ import { AdminPanel, usePaymentConfig } from './components/AdminPanel';
 import { AuthModal, AdminLogin } from './components/AuthModal';
 import { PurchaseModal } from './components/PurchaseModal';
 import { MultiPurchaseModal } from './components/MultiPurchaseModal';
+import { FinalRaffle } from './components/FinalRaffle';
 import { Logo } from './components/Logo';
 import { useSupabaseUser, useSupabaseRoom, useSupabaseWinners, useAllRoomsOccupiedCount } from './hooks/useSupabase';
+import { supabase } from './services/supabase';
 import { RoomType, Winner } from './types';
 import './index.css';
 
@@ -38,36 +40,47 @@ function App() {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showMultiPurchaseModal, setShowMultiPurchaseModal] = useState(false);
+  const [showFinalRaffle, setShowFinalRaffle] = useState(false);
 
   const room = useSupabaseRoom(selectedRoom);
 
   useEffect(() => {
-    if (room.isComplete && !room.isLoading && !currentWinner) {
-      handleRaffleComplete();
+    if (room.isComplete && !room.isLoading && !currentWinner && !showFinalRaffle) {
+      setShowFinalRaffle(true);
     }
   }, [room.isComplete, room.isLoading]);
 
-  const handleRaffleComplete = async () => {
-    const winnerNumber = await room.selectWinner();
-    if (winnerNumber?.owner) {
-      const winnerData: Winner = {
-        id: Date.now().toString(),
-        roomType: selectedRoom,
-        roomName: room.roomConfig.name,
-        number: winnerNumber.number,
-        playerName: winnerNumber.owner.fullName,
-        playerDNI: winnerNumber.owner.dni,
-        prize: room.roomConfig.prize,
-        date: new Date().toISOString(),
-        timestamp: Date.now()
-      };
+  const handleFinalRaffleComplete = async (winnerNumber: number) => {
+    setShowFinalRaffle(false);
+    
+    // Buscar el ganador en los números ocupados
+    const winnerNum = room.numbers.find(n => n.number === winnerNumber && n.status === 'occupied');
+    
+    if (winnerNum?.user_id) {
+      // Obtener datos del usuario ganador
+      const { data: userData } = await supabase
+        .from('users')
+        .select('full_name, dni')
+        .eq('id', winnerNum.user_id)
+        .single();
       
-      setCurrentWinner(winnerData);
-      await addWinner(winnerData);
-      
-      setTimeout(() => {
+      if (userData) {
+        const winnerData: Winner = {
+          id: Date.now().toString(),
+          roomType: selectedRoom,
+          roomName: room.roomConfig.name,
+          number: winnerNumber,
+          playerName: userData.full_name,
+          playerDNI: userData.dni,
+          prize: room.roomConfig.prize,
+          date: new Date().toISOString(),
+          timestamp: Date.now()
+        };
+        
+        setCurrentWinner(winnerData);
+        await addWinner(winnerData);
         setShowWinner(true);
-      }, 1000);
+      }
     }
   };
 
@@ -220,12 +233,12 @@ function App() {
             <div className="lg:col-span-2">
               <NumberGrid
                 numbers={room.numbers}
-                onSelectNumber={() => {}}
+                onSelectNumber={handleRouletteSelect}
                 occupiedCount={room.occupiedCount}
-                reservedCount={0}
+                reservedCount={room.numbers.filter(n => n.status === 'reserved').length}
                 progress={room.progress}
                 isComplete={room.isComplete}
-                roomColor={room.roomConfig.color}
+                roomConfig={room.roomConfig}
               />
             </div>
 
@@ -364,6 +377,17 @@ function App() {
               setShowMultiPurchaseModal(false);
             }}
             onRemoveNumber={handleRemoveFromCart}
+          />
+        )}
+
+        {showFinalRaffle && room.isComplete && (
+          <FinalRaffle
+            isOpen={showFinalRaffle}
+            occupiedNumbers={room.numbers.filter(n => n.status === 'occupied').map(n => n.number)}
+            roomName={room.roomConfig.name}
+            roomColor={room.roomConfig.color}
+            onComplete={handleFinalRaffleComplete}
+            onClose={() => setShowFinalRaffle(false)}
           />
         )}
 
