@@ -66,6 +66,7 @@ export interface UserProfile {
   dni: string;
   phone: string;
   cvuAlias: string;
+  password?: string;
 }
 
 export type NumberStatus = 'available' | 'reserved' | 'occupied';
