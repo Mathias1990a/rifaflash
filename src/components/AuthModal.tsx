@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Lock, Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, LogIn, UserPlus, Gift } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -27,7 +27,8 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
     phone: '',
     cvuAlias: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    referralCode: ''
   });
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -75,12 +76,13 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
     
     try {
       const { data, error } = await supabase
-        .rpc('create_user_with_password', {
+        .rpc('create_user_with_referral', {
           p_full_name: registerData.fullName,
           p_dni: registerData.dni,
           p_phone: registerData.phone,
           p_cvu_alias: registerData.cvuAlias,
-          p_password: registerData.password
+          p_password: registerData.password,
+          p_referral_code: registerData.referralCode || null
         });
       
       if (error) {
@@ -99,7 +101,10 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
         });
       
       if (loginData && loginData.length > 0) {
-        onLogin(loginData[0]);
+        onLogin({
+          ...loginData[0],
+          referralCode: data[0]?.code
+        });
         onClose();
       }
     } catch (err) {
@@ -281,6 +286,22 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
                     required
                     className="bg-white/5 border-white/10 text-white"
                   />
+                </div>
+
+                <div>
+                  <Label className="text-white/60 text-sm flex items-center gap-2">
+                    <Gift className="w-4 h-4 text-yellow-400" />
+                    Código de Referido (opcional)
+                  </Label>
+                  <Input
+                    value={registerData.referralCode}
+                    onChange={(e) => setRegisterData({...registerData, referralCode: e.target.value.toUpperCase()})}
+                    placeholder="Ej: ABC1234"
+                    className="bg-white/5 border-white/10 text-white"
+                  />
+                  <p className="text-xs text-white/40 mt-1">
+                    Si tenés un código de un amigo, ingresalo acá
+                  </p>
                 </div>
 
                 {error && (

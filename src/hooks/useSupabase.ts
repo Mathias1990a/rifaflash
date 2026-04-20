@@ -17,14 +17,15 @@ export function useSupabaseUser() {
 
   const registerUser = async (profile: UserProfile & { password?: string }) => {
     try {
-      // Usar la función RPC para crear usuario (versión simple sin referidos)
-      const { data: userId, error } = await supabase
-        .rpc('create_user_with_password', {
+      // Usar la función RPC para crear usuario con código de referido
+      const { data, error } = await supabase
+        .rpc('create_user_with_referral', {
           p_full_name: profile.fullName,
           p_dni: profile.dni,
           p_phone: profile.phone,
           p_cvu_alias: profile.cvuAlias,
-          p_password: profile.password || '123456'
+          p_password: profile.password || '123456',
+          p_referral_code: profile.referredBy || null
         });
       
       if (error) {
@@ -32,10 +33,11 @@ export function useSupabaseUser() {
         throw error;
       }
 
-      // Guardar en localStorage
+      // Guardar en localStorage con el código de referido generado
       const userData = {
         ...profile,
-        id: userId,
+        id: data[0].user_id,
+        referralCode: data[0].code,
         gameBalance: 0,
         hasMadeFirstPurchase: false
       };
@@ -43,12 +45,14 @@ export function useSupabaseUser() {
       localStorage.setItem('rifaflash_user', JSON.stringify(userData));
       setUser(userData);
       
-      // Notificar a Telegram (sin referido por ahora)
+      // Notificar a Telegram
       await TelegramService.notifyNewUserRegistration({
         fullName: profile.fullName,
         dni: profile.dni,
         phone: profile.phone,
-        cvuAlias: profile.cvuAlias
+        cvuAlias: profile.cvuAlias,
+        referralCode: data[0].code,
+        referredBy: profile.referredBy
       });
       
       return userData;

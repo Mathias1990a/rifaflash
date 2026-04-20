@@ -104,6 +104,21 @@ function App() {
     setShowMultiPurchaseModal(true);
   };
 
+  const handleNumberClick = (number: number) => {
+    if (!user) {
+      setShowRegistration(true);
+      return;
+    }
+    // Agregar número al carrito si no está ya
+    setSelectedNumbers(prev => {
+      if (prev.includes(number)) {
+        return prev; // Ya está en el carrito
+      }
+      return [...prev, number];
+    });
+    setShowMultiPurchaseModal(true);
+  };
+
   const handleRemoveFromCart = (number: number) => {
     setSelectedNumbers(prev => prev.filter(n => n !== number));
   };
@@ -233,7 +248,7 @@ function App() {
             <div className="lg:col-span-2">
               <NumberGrid
                 numbers={room.numbers}
-                onSelectNumber={handleRouletteSelect}
+                onSelectNumber={handleNumberClick}
                 occupiedCount={room.occupiedCount}
                 reservedCount={room.numbers.filter(n => n.status === 'reserved').length}
                 progress={room.progress}
