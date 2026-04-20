@@ -198,6 +198,82 @@ function App() {
               </button>
             </div>
           </div>
+
+          {/* Menú Mobile */}
+          {showMobileMenu && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden mt-4 pb-4 border-t border-white/10 pt-4"
+            >
+              <div className="flex flex-col gap-4">
+                {user ? (
+                  <>
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5">
+                      <div className="w-10 h-10 rounded-full bg-violet-500/20 flex items-center justify-center">
+                        <User className="w-5 h-5 text-violet-400" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-white">{user.fullName}</p>
+                        <p className="text-sm text-white/50">{user.dni}</p>
+                      </div>
+                    </div>
+                    
+                    {user.gameBalance > 0 && (
+                      <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+                        <span className="text-yellow-400">Saldo para jugar</span>
+                        <span className="font-bold text-yellow-400">${user.gameBalance.toLocaleString()}</span>
+                      </div>
+                    )}
+
+                    {selectedNumbers.length > 0 && (
+                      <button
+                        onClick={() => {
+                          setShowMultiPurchaseModal(true);
+                          setShowMobileMenu(false);
+                        }}
+                        className="flex items-center justify-between px-4 py-3 rounded-xl bg-violet-500/20 border border-violet-500/40"
+                      >
+                        <span className="text-violet-300">Carrito</span>
+                        <span className="font-bold text-violet-300">{selectedNumbers.length} números</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        logout();
+                        setShowMobileMenu(false);
+                      }}
+                      className="px-4 py-3 rounded-xl bg-red-500/10 text-red-400 text-center"
+                    >
+                      Cerrar sesión
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setShowRegistration(true);
+                      setShowMobileMenu(false);
+                    }}
+                    className="px-4 py-3 rounded-xl bg-violet-500 text-white font-medium text-center"
+                  >
+                    Iniciar sesión / Crear cuenta
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    setShowAdminLogin(true);
+                    setShowMobileMenu(false);
+                  }}
+                  className="px-4 py-3 rounded-xl bg-white/5 text-white/60 text-center"
+                >
+                  Panel Admin
+                </button>
+              </div>
+            </motion.div>
+          )}
         </header>
 
         <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
