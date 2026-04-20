@@ -93,10 +93,16 @@ export function UserProfileCard({ profile, onEdit, onLogout, userNumbers, roomCo
                 <Copy className="w-4 h-4" />
               </Button>
             </div>
-            <p className="text-xs text-white/50 mt-2">
-              Compartí este código con tus amigos. Cuando se registren y compren un número, 
-              <span className="text-green-400 font-semibold"> vos ganás $3.000</span> para jugar.
-            </p>
+            <div className="mt-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+              <p className="text-sm text-white font-medium mb-1">
+                🎁 Referí a un amigo y llevate $3.000
+              </p>
+              <p className="text-xs text-white/70">
+                Compartí tu código. Cuando tu amigo se registre y <strong>compre su primer número</strong>, 
+                automáticamente vas a tener $3.000 para comprar números. 
+                <span className="text-green-400">¡Mientras más referís, más números podés comprar!</span>
+              </p>
+            </div>
           </div>
         )}
 
