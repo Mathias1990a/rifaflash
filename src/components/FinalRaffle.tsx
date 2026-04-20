@@ -150,7 +150,7 @@ export function FinalRaffle({
         <div className="relative">
           <AnimatePresence mode="wait">
             {!isSpinning && !winner ? (
-              <!-- Conteo Regresivo -->
+              /* Conteo Regresivo */
               <motion.div
                 key="countdown"
                 initial={{ opacity: 0, scale: 0.5 }}
@@ -179,7 +179,7 @@ export function FinalRaffle({
                 </p>
               </motion.div>
             ) : (
-              <!-- Ruleta Girando -->
+              /* Ruleta Girando */
               <motion.div
                 key="roulette"
                 initial={{ opacity: 0 }}
