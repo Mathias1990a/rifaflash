@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, User, Sparkles, Trophy, MessageCircle, Zap, Wallet, ShoppingCart } from 'lucide-react';
+import { Menu, X, User, Sparkles, Trophy, MessageCircle, Zap, Wallet, ShoppingCart, Gift } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { RegistrationForm } from './components/RegistrationForm';
 import { WinnerAnimation } from './components/WinnerAnimation';
@@ -295,6 +295,51 @@ function App() {
               occupiedCounts={occupiedCounts}
             />
           </div>
+
+          {/* Banner de Referidos */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 rounded-2xl p-6 border-2 border-green-500/30 bg-gradient-to-r from-green-500/10 to-emerald-500/10"
+          >
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <Gift className="w-6 h-6 text-green-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">🎁 Referí y ganá $3.000</h3>
+                  <p className="text-sm text-white/70">
+                    Invitá a un amigo con tu código. Cuando compre su primer número, 
+                    <span className="text-green-400 font-semibold"> vos ganás $3.000</span> para jugar.
+                  </p>
+                </div>
+              </div>
+              {user?.referralCode ? (
+                <div className="flex items-center gap-2">
+                  <code className="px-4 py-2 rounded-lg bg-black/30 text-green-400 font-mono">
+                    {user.referralCode}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(user.referralCode!);
+                      alert('¡Código copiado!');
+                    }}
+                    className="px-3 py-2 rounded-lg bg-green-500/20 text-green-400 text-sm hover:bg-green-500/30"
+                  >
+                    Copiar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowRegistration(true)}
+                  className="px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600"
+                >
+                  Registrate para obtener tu código
+                </button>
+              )}
+            </div>
+          </motion.div>
 
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
