@@ -22,7 +22,7 @@ import { RoomType, Winner } from './types';
 import './index.css';
 
 function App() {
-  const { user, isLoading: userLoading, registerUser, logout } = useSupabaseUser();
+  const { user, isLoading: userLoading, registerUser, logout, setUser } = useSupabaseUser();
   const { winners, isLoading: winnersLoading, addWinner } = useSupabaseWinners();
   const { occupiedCounts, isLoading: countsLoading } = useAllRoomsOccupiedCount();
   
@@ -86,6 +86,13 @@ function App() {
 
   const handleProfileSubmit = async (newProfile: any) => {
     await registerUser(newProfile);
+    setShowRegistration(false);
+  };
+
+  const handleUserLogin = (userData: any) => {
+    // Guardar usuario en estado y localStorage
+    setUser(userData);
+    localStorage.setItem('rifaflash_user', JSON.stringify(userData));
     setShowRegistration(false);
   };
 
@@ -382,7 +389,7 @@ function App() {
         <AuthModal 
           isOpen={showRegistration} 
           onClose={() => setShowRegistration(false)} 
-          onLogin={handleProfileSubmit}
+          onLogin={handleUserLogin}
         />
 
         <AdminLogin

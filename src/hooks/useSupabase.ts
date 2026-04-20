@@ -67,7 +67,7 @@ export function useSupabaseUser() {
     setUser(null);
   };
 
-  return { user, isLoading, registerUser, logout };
+  return { user, isLoading, registerUser, logout, setUser };
 }
 
 export function useSupabaseRoom(roomType: RoomType) {
