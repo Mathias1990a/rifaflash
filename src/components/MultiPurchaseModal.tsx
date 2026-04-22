@@ -27,6 +27,12 @@ interface MultiPurchaseModalProps {
   };
   onPurchaseSubmitted: () => void;
   onRemoveNumber: (number: number) => void;
+  paymentConfig?: {
+    alias: string;
+    cbu: string;
+    accountName: string;
+    bankName: string;
+  };
 }
 
 export function MultiPurchaseModal({
@@ -38,7 +44,8 @@ export function MultiPurchaseModal({
   roomId,
   user,
   onPurchaseSubmitted,
-  onRemoveNumber
+  onRemoveNumber,
+  paymentConfig
 }: MultiPurchaseModalProps) {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,8 +69,33 @@ export function MultiPurchaseModal({
     setIsLoading(true);
 
     try {
-      // PRIMERO: Reservar los números inmediatamente
+      console.log('Iniciando proceso de compra:', {
+        selectedNumbers,
+        userId: user.id,
+        roomId,
+        roomPrice
+      });
+
+      // PRIMERO: Obtener el room_id correcto (UUID) usando el nombre
+      const { data: roomData, error: roomError } = await supabase
+        .from('rooms')
+        .select('id')
+        .eq('name', roomName)
+        .single();
+
+      if (roomError || !roomData) {
+        console.error('Error obteniendo room:', roomError);
+        alert('Error al obtener información de la sala');
+        setIsLoading(false);
+        return;
+      }
+
+      const actualRoomId = roomData.id;
+
+      // SEGUNDO: Reservar los números inmediatamente
       for (const number of selectedNumbers) {
+        console.log(`Reservando número ${number}...`);
+        
         const { error: reserveError } = await supabase
           .from('numbers')
           .update({
@@ -71,24 +103,28 @@ export function MultiPurchaseModal({
             user_id: user.id,
             reserved_at: new Date().toISOString()
           })
-          .eq('room_id', roomId)
+          .eq('room_id', actualRoomId)
           .eq('number', number)
           .eq('status', 'available'); // Solo si está disponible
 
         if (reserveError) {
           console.error('Error reservando número:', reserveError);
-          alert(`El número ${number} ya no está disponible`);
+          alert(`El número ${number} ya no está disponible o hubo un error al reservarlo`);
           setIsLoading(false);
           return;
         }
+        
+        console.log(`Número ${number} reservado exitosamente`);
       }
 
-      // DESPUÉS: Crear pagos pendientes para cada número
+      // TERCERO: Crear pagos pendientes para cada número
       for (const number of selectedNumbers) {
-        const { error } = await supabase
+        console.log(`Creando pago pendiente para número ${number}...`);
+        
+        const { data, error } = await supabase
           .rpc('create_pending_payment', {
             p_user_id: user.id,
-            p_room_id: roomId,
+            p_room_id: actualRoomId,
             p_number: number,
             p_amount: roomPrice,
             p_sender_name: transferData.senderName,
@@ -97,29 +133,41 @@ export function MultiPurchaseModal({
             p_notes: `${transferData.notes} | Número ${number} de ${selectedNumbers.length}`
           });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error creando pago pendiente:', error);
+          throw error;
+        }
+        
+        console.log(`Pago creado exitosamente para número ${number}:`, data);
 
         // Notificar a Telegram por cada número
-        await TelegramService.notifyTransferPayment(
-          user.fullName,
-          user.dni,
-          number,
-          roomPrice,
-          {
-            senderName: transferData.senderName,
-            senderCbu: transferData.senderCbu,
-            date: transferData.date,
-            amount: roomPrice,
-            notes: `${transferData.notes} | Compra múltiple: ${selectedNumbers.length} números`
-          }
-        );
+        try {
+          await TelegramService.notifyTransferPayment(
+            user.fullName,
+            user.dni,
+            number,
+            roomPrice,
+            {
+              senderName: transferData.senderName,
+              senderCbu: transferData.senderCbu,
+              date: transferData.date,
+              amount: roomPrice,
+              notes: `${transferData.notes} | Compra múltiple: ${selectedNumbers.length} números`
+            }
+          );
+          console.log(`Notificación Telegram enviada para número ${number}`);
+        } catch (telegramError) {
+          console.error('Error enviando notificación Telegram:', telegramError);
+          // No fallamos todo si Telegram falla
+        }
       }
 
       setStep(3); // Mostrar confirmación
       onPurchaseSubmitted();
+      console.log('Proceso de compra completado exitosamente');
     } catch (error) {
-      console.error('Error al procesar:', error);
-      alert('Error al procesar la compra. Intentá de nuevo.');
+      console.error('Error al procesar la compra:', error);
+      alert('Error al procesar la compra. Intentá de nuevo. Error: ' + (error as Error).message);
     } finally {
       setIsLoading(false);
     }
@@ -226,8 +274,10 @@ export function MultiPurchaseModal({
             {/* Datos del CBU del admin */}
             <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
               <p className="text-sm font-medium text-yellow-300 mb-2">Transferí el total a este CBU:</p>
-              <p className="text-lg font-mono text-white bg-black/30 p-2 rounded">0000003100075199635083</p>
-              <p className="text-xs text-white/50 mt-1">Alias: rifaflash.mp</p>
+              <p className="text-lg font-mono text-white bg-black/30 p-2 rounded">{paymentConfig?.cbu || '0000003100075199635083'}</p>
+              <p className="text-xs text-white/50 mt-1">Alias: {paymentConfig?.alias || 'rifaflash.mp'}</p>
+              <p className="text-xs text-white/50 mt-1">Titular: {paymentConfig?.accountName || 'RifaFlash'}</p>
+              <p className="text-xs text-white/50 mt-1">Banco: {paymentConfig?.bankName || 'Ualá Bis'}</p>
               <div className="mt-3 pt-3 border-t border-yellow-500/20">
                 <p className="text-sm text-yellow-400 font-bold">Total a transferir: ${totalAmount.toLocaleString()}</p>
               </div>

@@ -17,15 +17,14 @@ export function useSupabaseUser() {
 
   const registerUser = async (profile: UserProfile & { password?: string }) => {
     try {
-      // Usar la función RPC para crear usuario con código de referido
+      // Usar la función RPC para crear usuario
       const { data, error } = await supabase
-        .rpc('create_user_with_referral', {
+        .rpc('create_user_with_password', {
           p_full_name: profile.fullName,
           p_dni: profile.dni,
           p_phone: profile.phone,
           p_cvu_alias: profile.cvuAlias,
-          p_password: profile.password || '123456',
-          p_referral_code: profile.referredBy || null
+          p_password: profile.password || '123456'
         });
       
       if (error) {
@@ -36,8 +35,8 @@ export function useSupabaseUser() {
       // Guardar en localStorage con el código de referido generado
       const userData = {
         ...profile,
-        id: data[0].user_id,
-        referralCode: data[0].code,
+        id: data,
+        referralCode: undefined,
         gameBalance: 0,
         hasMadeFirstPurchase: false
       };
@@ -51,7 +50,7 @@ export function useSupabaseUser() {
         dni: profile.dni,
         phone: profile.phone,
         cvuAlias: profile.cvuAlias,
-        referralCode: data[0].code,
+        referralCode: undefined,
         referredBy: profile.referredBy
       });
       
@@ -79,13 +78,26 @@ export function useSupabaseRoom(roomType: RoomType) {
   // Cargar números iniciales
   useEffect(() => {
     const loadNumbers = async () => {
+      // Primero obtener el ID de la sala por nombre
+      const { data: roomData, error: roomError } = await supabase
+        .from('rooms')
+        .select('id')
+        .eq('name', roomType === 'standard' ? 'Sala Standard' : 
+               roomType === 'premium' ? 'Sala Premium' : 'Sala VIP')
+        .single();
+
+      if (roomError || !roomData) {
+        console.error('Error loading room:', roomError);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('numbers')
         .select(`
           *,
           user:users(*)
         `)
-        .eq('room_id', roomType)
+        .eq('room_id', roomData.id)
         .order('number', { ascending: true });
 
       if (error) {
@@ -218,12 +230,13 @@ export function useAllRoomsOccupiedCount() {
 
   useEffect(() => {
     const loadCounts = async () => {
-      const { data, error } = await supabase
+      // Obtener todos los rooms y contar números ocupados para cada uno
+      const { data: rooms, error: roomsError } = await supabase
         .from('rooms')
-        .select('id, occupied_count');
+        .select('id, name');
       
-      if (error) {
-        console.error('Error loading room counts:', error);
+      if (roomsError) {
+        console.error('Error loading rooms:', roomsError);
         return;
       }
 
@@ -233,11 +246,24 @@ export function useAllRoomsOccupiedCount() {
         vip: 0
       };
 
-      data?.forEach((room: any) => {
-        if (room.id in counts) {
-          counts[room.id as RoomType] = room.occupied_count || 0;
+      // Para cada room, contar números ocupados
+      for (const room of rooms || []) {
+        const { data: numbers, error: numbersError } = await supabase
+          .from('numbers')
+          .select('status')
+          .eq('room_id', room.id);
+        
+        if (!numbersError && numbers) {
+          const occupiedCount = numbers.filter(n => n.status === 'occupied').length;
+          if (room.name === 'Sala Standard') {
+            counts.standard = occupiedCount;
+          } else if (room.name === 'Sala Premium') {
+            counts.premium = occupiedCount;
+          } else if (room.name === 'Sala VIP') {
+            counts.vip = occupiedCount;
+          }
         }
-      });
+      }
 
       setOccupiedCounts(counts);
       setIsLoading(false);

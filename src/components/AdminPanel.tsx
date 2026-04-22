@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Save, CheckCircle2, XCircle, AlertCircle, Eye, EyeOff, LogOut, Banknote, Users, TrendingUp } from 'lucide-react';
+import { Settings, Save, CheckCircle2, XCircle, AlertCircle, Eye, EyeOff, LogOut, Banknote, Users, TrendingUp, MessageSquare, RefreshCw, Send } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -34,7 +34,7 @@ interface AdminPanelProps {
 }
 
 export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<'payments' | 'config'>('payments');
+  const [activeTab, setActiveTab] = useState<'payments' | 'config' | 'support'>('payments');
   const [config, setConfig] = useState<PaymentConfig>({
     alias: 'rifaflash.bis',
     cbu: '0000003100000001234567',
@@ -44,16 +44,70 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   const [payments, setPayments] = useState<PendingPayment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showCbu, setShowCbu] = useState(false);
+  const [supportMessages, setSupportMessages] = useState<any[]>([]);
+  const [numberChanges, setNumberChanges] = useState<any[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem('rifaflash_admin_config');
     if (saved) setConfig(JSON.parse(saved));
     loadPayments();
+    loadSupportData();
   }, []);
+
+  const loadSupportData = async () => {
+    try {
+      // Cargar mensajes de soporte
+      const { data: messages, error: messagesError } = await supabase
+        .from('support_messages')
+        .select(`
+          *,
+          user:users(full_name, dni)
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (!messagesError && messages) {
+        setSupportMessages(messages);
+      }
+
+      // Cargar cambios de número
+      const { data: changes, error: changesError } = await supabase
+        .from('number_changes')
+        .select(`
+          *,
+          user:users(full_name, dni)
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (!changesError && changes) {
+        setNumberChanges(changes);
+      }
+    } catch (error) {
+      console.error('Error cargando datos de soporte:', error);
+    }
+  };
 
   const loadPayments = async () => {
     setIsLoading(true);
     try {
+      console.log('Cargando pagos pendientes...');
+      
+      // Primero verificar si la tabla existe
+      const { data: tableCheck, error: tableError } = await supabase
+        .from('pending_payments')
+        .select('count', { count: 'exact' })
+        .eq('status', 'pending');
+      
+      console.log('Verificación de tabla:', { tableCheck, tableError });
+      
+      if (tableError) {
+        console.error('Error al verificar tabla:', tableError);
+        throw tableError;
+      }
+      
+      console.log(`Total de pagos pendientes en BD: ${tableCheck}`);
+      
       const { data, error } = await supabase
         .from('pending_payments')
         .select(`
@@ -63,9 +117,16 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      console.log('Respuesta de pagos con datos de usuario:', { data, error });
       
-      if (data) {
+      if (error) {
+        console.error('Error en consulta:', error);
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        console.log(`Se encontraron ${data.length} pagos pendientes`);
+        console.log('Primer pago:', data[0]);
         setPayments(data.map((p: any) => ({
           id: p.id,
           user_name: p.user?.full_name || 'N/A',
@@ -79,9 +140,13 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
           notes: p.notes,
           created_at: p.created_at
         })));
+      } else {
+        console.log('No se encontraron pagos pendientes');
+        setPayments([]);
       }
     } catch (error) {
       console.error('Error cargando pagos:', error);
+      setPayments([]);
     } finally {
       setIsLoading(false);
     }
@@ -194,6 +259,15 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
           >
             <Settings className="w-4 h-4" />
             Configuración
+          </button>
+          <button
+            onClick={() => setActiveTab('support')}
+            className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium ${
+              activeTab === 'support' ? 'text-white border-b-2 border-red-500 bg-white/5' : 'text-white/50'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            Soporte
           </button>
         </div>
 
@@ -328,6 +402,125 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                 <Save className="w-4 h-4 mr-2" />
                 Guardar Configuración
               </Button>
+            </div>
+          )}
+
+          {activeTab === 'support' && (
+            <div className="space-y-6">
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <MessageSquare className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-blue-400 text-sm font-medium">Centro de Soporte</p>
+                    <p className="text-white/60 text-xs mt-1">Gestioná mensajes de clientes y solicitudes de cambio de número.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="text-white font-medium mb-4 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-blue-400" />
+                    Mensajes de Clientes ({supportMessages.length})
+                  </h4>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {supportMessages.length === 0 ? (
+                      <div className="bg-black/30 rounded-lg p-4 text-sm text-white/70">
+                        <p className="mb-2">No hay mensajes pendientes</p>
+                        <p className="text-xs">Los mensajes de los clientes aparecerán aquí.</p>
+                      </div>
+                    ) : (
+                      supportMessages.map((msg) => (
+                        <div key={msg.id} className="bg-black/30 rounded-lg p-4 text-sm">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="text-white font-medium">{msg.user?.full_name || 'N/A'}</p>
+                              <p className="text-white/60 text-xs">{msg.user?.dni || 'N/A'}</p>
+                            </div>
+                            <span className="text-xs text-white/50">
+                              {new Date(msg.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-white/80 mb-2 font-medium">{msg.subject}</p>
+                          <p className="text-white/60 text-xs">{msg.message}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-white font-medium mb-4 flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 text-cyan-400" />
+                    Cambios de Número ({numberChanges.length})
+                  </h4>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {numberChanges.length === 0 ? (
+                      <div className="bg-black/30 rounded-lg p-4 text-sm text-white/70">
+                        <p className="mb-2">No hay solicitudes pendientes</p>
+                        <p className="text-xs">Las solicitudes de cambio aparecerán aquí.</p>
+                      </div>
+                    ) : (
+                      numberChanges.map((change) => (
+                        <div key={change.id} className="bg-black/30 rounded-lg p-4 text-sm">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="text-white font-medium">{change.user?.full_name || 'N/A'}</p>
+                              <p className="text-white/60 text-xs">{change.user?.dni || 'N/A'}</p>
+                            </div>
+                            <span className="text-xs text-white/50">
+                              {new Date(change.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-white/80">
+                            <span className="text-red-400">#{change.old_number}</span>
+                            <RefreshCw className="w-3 h-3" />
+                            <span className="text-green-400">#{change.new_number}</span>
+                            <span className="text-white/60">Sala {change.room_id}</span>
+                          </div>
+                          {change.reason && (
+                            <p className="text-white/60 text-xs mt-1">Motivo: {change.reason}</p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/5 rounded-xl p-4">
+                <h4 className="text-white font-medium mb-3">Acciones Disponibles</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button 
+                    onClick={() => alert('Función de respuesta de mensajes en desarrollo')}
+                    className="bg-blue-500 hover:bg-blue-600 text-white text-sm"
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Responder Mensajes
+                  </Button>
+                  <Button 
+                    onClick={() => alert('Función de gestión de cambios en desarrollo')}
+                    className="bg-cyan-500 hover:bg-cyan-600 text-white text-sm"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Gestionar Cambios
+                  </Button>
+                  <Button 
+                    onClick={() => alert('Función de historial en desarrollo')}
+                    className="bg-purple-500 hover:bg-purple-600 text-white text-sm"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Historial
+                  </Button>
+                  <Button 
+                    onClick={() => alert('Notificaciones automáticas activas')}
+                    className="bg-green-500 hover:bg-green-600 text-white text-sm"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Notificaciones
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </div>

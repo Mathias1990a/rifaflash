@@ -87,7 +87,9 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
       
       if (error) {
         if (error.message.includes('unique constraint')) {
-          setError('Ya existe un usuario con ese DNI');
+          setError('Ya existe un usuario con ese DNI. Iniciá sesión.');
+        } else if (error.message.includes('Código de referido inválido')) {
+          setError('El código de referido no es válido');
         } else {
           throw error;
         }
@@ -103,7 +105,7 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
       if (loginData && loginData.length > 0) {
         onLogin({
           ...loginData[0],
-          referralCode: data[0]?.code
+          referralCode: data[0]?.referral_code
         });
         onClose();
       }
