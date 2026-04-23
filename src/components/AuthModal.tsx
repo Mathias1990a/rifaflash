@@ -37,9 +37,10 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
     setError('');
     
     try {
+      const email = loginDni.includes('@') ? loginDni : `${loginDni}@rifaflash.com`;
       const { data, error } = await supabase
         .rpc('verify_user', {
-          p_dni: loginDni,
+          p_email: email,
           p_password: loginPassword
         });
       
@@ -96,9 +97,10 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
         return;
       }
       
+      const email = `${registerData.dni}@rifaflash.com`;
       const { data: loginData } = await supabase
         .rpc('verify_user', {
-          p_dni: registerData.dni,
+          p_email: email,
           p_password: registerData.password
         });
       

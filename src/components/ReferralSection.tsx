@@ -14,7 +14,7 @@ export function ReferralSection({ userReferralCode, userName, userBalance = 0 }:
   const [copied, setCopied] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
 
-  const referralMessage = `¡Hola! Soy ${userName || 'un amigo'} y te invito a participar en RafaFlash. \n\nRegistrate con mi código de referido: ${userReferralCode || ''}\n\nPodés ganar increíbles premios y yo recibo $3.000 por tu primera compra. ¡Ambos ganamos! \n\nRegistrate aquí: https://rapi-premio.vercel.app`;
+  const referralMessage = `¡Hola! Soy ${userName || 'un amigo'} y te invito a participar en RafaFlash. \n\nRegistrate con mi código de referido: ${userReferralCode || ''}\n\nPodés ganar increíbles premios y yo recibo $500 por tu registro. ¡Ambos ganamos! \n\nRegistrate aquí: https://rapi-premio.vercel.app`;
 
   const copyReferralCode = () => {
     if (userReferralCode) {
