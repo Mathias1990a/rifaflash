@@ -9,8 +9,10 @@ SELECT
 FROM pg_proc 
 WHERE proname LIKE 'create_user%';
 
--- 2. Crear función create_user_with_referral (la que falta)
-CREATE OR REPLACE FUNCTION create_user_with_referral(
+-- 2. Eliminar y crear función create_user_with_referral (la que falta)
+DROP FUNCTION IF EXISTS create_user_with_referral(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
+
+CREATE FUNCTION create_user_with_referral(
     p_full_name TEXT,
     p_dni TEXT,
     p_phone TEXT,
