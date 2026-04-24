@@ -76,25 +76,12 @@ export function MultiPurchaseModal({
         roomPrice
       });
 
-      // PRIMERO: Obtener el room_id correcto (UUID) usando el nombre
-      const { data: roomData, error: roomError } = await supabase
-        .from('rooms')
-        .select('id')
-        .eq('name', roomName)
-        .single();
+      // Usar directamente el roomId que viene como prop (standard, premium, vip)
+      const actualRoomId = roomId;
 
-      if (roomError || !roomData) {
-        console.error('Error obteniendo room:', roomError);
-        alert('Error al obtener información de la sala');
-        setIsLoading(false);
-        return;
-      }
-
-      const actualRoomId = roomData.id;
-
-      // SEGUNDO: Reservar los números inmediatamente
+      // PRIMERO: Reservar los números inmediatamente
       for (const number of selectedNumbers) {
-        console.log(`Reservando número ${number}...`);
+        console.log(`Reservando número ${number} en sala ${actualRoomId}...`);
         
         const { error: reserveError } = await supabase
           .from('numbers')

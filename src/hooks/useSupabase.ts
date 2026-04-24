@@ -17,14 +17,15 @@ export function useSupabaseUser() {
 
   const registerUser = async (profile: UserProfile & { password?: string }) => {
     try {
-      // Usar la función RPC para crear usuario
+      // Usar la función RPC para crear usuario con referido
       const { data, error } = await supabase
-        .rpc('create_user_with_password', {
+        .rpc('create_user_with_referral', {
           p_full_name: profile.fullName,
           p_dni: profile.dni,
           p_phone: profile.phone,
           p_cvu_alias: profile.cvuAlias,
-          p_password: profile.password || '123456'
+          p_password: profile.password || '123456',
+          p_referral_code: profile.referredBy || null
         });
       
       if (error) {
@@ -35,8 +36,8 @@ export function useSupabaseUser() {
       // Guardar en localStorage con el código de referido generado
       const userData = {
         ...profile,
-        id: data,
-        referralCode: undefined,
+        id: data[0].user_id,
+        referralCode: data[0].code,
         gameBalance: 0,
         hasMadeFirstPurchase: false
       };
@@ -50,7 +51,7 @@ export function useSupabaseUser() {
         dni: profile.dni,
         phone: profile.phone,
         cvuAlias: profile.cvuAlias,
-        referralCode: undefined,
+        referralCode: data[0].code,
         referredBy: profile.referredBy
       });
       
