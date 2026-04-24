@@ -79,26 +79,14 @@ export function useSupabaseRoom(roomType: RoomType) {
   // Cargar números iniciales
   useEffect(() => {
     const loadNumbers = async () => {
-      // Primero obtener el ID de la sala por nombre
-      const { data: roomData, error: roomError } = await supabase
-        .from('rooms')
-        .select('id')
-        .eq('name', roomType === 'standard' ? 'Sala Standard' : 
-               roomType === 'premium' ? 'Sala Premium' : 'Sala VIP')
-        .single();
-
-      if (roomError || !roomData) {
-        console.error('Error loading room:', roomError);
-        return;
-      }
-
+      // Usar directamente el roomType como room_id (standard, premium, vip)
       const { data, error } = await supabase
         .from('numbers')
         .select(`
           *,
           user:users(*)
         `)
-        .eq('room_id', roomData.id)
+        .eq('room_id', roomType)
         .order('number', { ascending: true });
 
       if (error) {
