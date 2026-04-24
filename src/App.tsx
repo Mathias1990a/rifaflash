@@ -390,10 +390,10 @@ function App() {
                   <motion.div key="cta" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="rounded-2xl p-6 border-2 border-violet-500/30" style={{ background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(99, 102, 241, 0.1) 100%)' }}>
                     <div className="text-center space-y-4">
                       <Sparkles className="w-10 h-10 text-yellow-400 mx-auto" />
-                      <h3 className="text-2xl font-display">¿Querés participar?</h3>
+                      <h3 className="text-2xl font-display">Iniciá sesión para participar</h3>
                       <p className="text-white/60">Registrate gratis y comprá tus números</p>
-                      <Button onClick={() => setShowRegistration(true)} size="lg" className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold">
-                        Crear cuenta
+                      <Button onClick={() => setShowRegistration(true)} size="lg" className="w-full bg-gradient-to-r from-violet-500 to-violet-700 text-white font-bold">
+                        Iniciar sesión
                       </Button>
                     </div>
                   </motion.div>

@@ -319,6 +319,15 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
                 >
                   {isLoading ? 'Creando...' : 'Crear Cuenta'}
                 </Button>
+
+                <Button 
+                  type="button"
+                  variant="ghost"
+                  onClick={onClose}
+                  className="w-full text-white/60 hover:text-white"
+                >
+                  Cancelar
+                </Button>
               </motion.form>
             )}
           </AnimatePresence>
