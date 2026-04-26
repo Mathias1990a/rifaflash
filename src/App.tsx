@@ -7,7 +7,8 @@ import { NumberGrid } from './components/NumberGrid';
 import { WinnersList, WinnersCompact } from './components/WinnersList';
 import { RoomSelector } from './components/RoomSelector';
 import { CasinoBolillero } from './components/CasinoBolillero';
-import { useSupabaseUser, useSupabaseRoom, useSupabaseWinners, useAllRoomsOccupiedCount } from './hooks/useSupabase';
+import { useSupabaseUser, useSupabaseWinners, useAllRoomsOccupiedCount } from './hooks/useSupabase';
+import { useSimpleRoom } from './hooks/useSimpleRoom';
 import { WorkingAdminPanel } from './components/WorkingAdminPanel';
 import { AuthModal, AdminLogin } from './components/AuthModal';
 import { PurchaseModal } from './components/PurchaseModal';
@@ -36,7 +37,7 @@ function App() {
   const [showMultiPurchaseModal, setShowMultiPurchaseModal] = useState(false);
   const [showFinalRaffle, setShowFinalRaffle] = useState(false);
 
-  const room = useSupabaseRoom(selectedRoom);
+  const room = useSimpleRoom(selectedRoom);
 
   useEffect(() => {
     if (room.isComplete && !room.isLoading && !currentWinner && !showFinalRaffle) {
