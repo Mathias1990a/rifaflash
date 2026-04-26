@@ -81,15 +81,12 @@ export async function getRoomById(roomId: RoomType) {
 export async function getNumbersByRoom(roomId: RoomType) {
   const { data, error } = await supabase
     .from('numbers')
-    .select(`
-      *,
-      user:users(id, full_name, dni, phone, cvu_alias)
-    `)
+    .select('*')
     .eq('room_id', roomId)
     .order('number', { ascending: true });
   
   if (error) throw error;
-  return data;
+  return data || [];
 }
 
 export async function reserveNumber(roomId: RoomType, number: number, userId: string) {

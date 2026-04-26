@@ -91,12 +91,7 @@ export function useSupabaseRoom(roomType: RoomType) {
         const formatted = data.map((n: any) => ({
           number: n.number,
           status: n.status,
-          owner: n.user ? {
-            fullName: n.user.full_name,
-            dni: n.user.dni,
-            phone: n.user.phone,
-            cvuAlias: n.user.cvu_alias
-          } : undefined,
+          owner: undefined, // Por ahora no cargamos el dueño
           reservedAt: n.reserved_at,
           paymentMethod: n.payment_method
         }));
