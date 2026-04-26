@@ -81,39 +81,33 @@ export function useSupabaseRoom(roomType: RoomType) {
     const loadNumbers = async () => {
       console.log('Cargando números para sala:', roomType);
       
-      // Usar directamente el roomType como room_id (standard, premium, vip)
-      const { data, error } = await supabase
-        .from('numbers')
-        .select(`
-          *,
-          user:users(*)
-        `)
-        .eq('room_id', roomType)
-        .order('number', { ascending: true });
+      try {
+        // Usar la función getNumbersByRoom del servicio
+        const { getNumbersByRoom } = await import('../services/supabase');
+        const data = await getNumbersByRoom(roomType);
+        
+        console.log('Números cargados:', data?.length || 0, data);
 
-      if (error) {
-        console.error('Error loading numbers:', error);
-        return;
+        const formatted = data.map((n: any) => ({
+          number: n.number,
+          status: n.status,
+          owner: n.user ? {
+            fullName: n.user.full_name,
+            dni: n.user.dni,
+            phone: n.user.phone,
+            cvuAlias: n.user.cvu_alias
+          } : undefined,
+          reservedAt: n.reserved_at,
+          paymentMethod: n.payment_method
+        }));
+
+        setNumbers(formatted);
+        setOccupiedCount(formatted.filter((n: RaffleNumber) => n.status === 'occupied').length);
+      } catch (error) {
+        console.error('Error cargando números:', error);
+      } finally {
+        setIsLoading(false);
       }
-
-      console.log('Números cargados:', data?.length || 0, data);
-
-      const formatted = data.map((n: any) => ({
-        number: n.number,
-        status: n.status,
-        owner: n.user ? {
-          fullName: n.user.full_name,
-          dni: n.user.dni,
-          phone: n.user.phone,
-          cvuAlias: n.user.cvu_alias
-        } : undefined,
-        reservedAt: n.reserved_at,
-        paymentMethod: n.payment_method
-      }));
-
-      setNumbers(formatted);
-      setOccupiedCount(formatted.filter((n: RaffleNumber) => n.status === 'occupied').length);
-      setIsLoading(false);
     };
 
     loadNumbers();
