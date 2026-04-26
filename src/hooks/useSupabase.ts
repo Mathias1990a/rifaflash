@@ -79,6 +79,8 @@ export function useSupabaseRoom(roomType: RoomType) {
   // Cargar números iniciales
   useEffect(() => {
     const loadNumbers = async () => {
+      console.log('Cargando números para sala:', roomType);
+      
       // Usar directamente el roomType como room_id (standard, premium, vip)
       const { data, error } = await supabase
         .from('numbers')
@@ -93,6 +95,8 @@ export function useSupabaseRoom(roomType: RoomType) {
         console.error('Error loading numbers:', error);
         return;
       }
+
+      console.log('Números cargados:', data?.length || 0, data);
 
       const formatted = data.map((n: any) => ({
         number: n.number,
