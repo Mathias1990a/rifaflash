@@ -132,7 +132,12 @@ export function NumberGrid({
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+      {numbers.length === 0 ? (
+        <div className="text-center py-8 text-white/60">
+          Cargando números...
+        </div>
+      ) : (
+        <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
         <AnimatePresence>
           {numbers.map((num, index) => (
             <motion.button
@@ -174,7 +179,8 @@ export function NumberGrid({
             </motion.button>
           ))}
         </AnimatePresence>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
