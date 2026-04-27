@@ -16,24 +16,42 @@ export function useSimpleRoom(roomType: RoomType) {
 
   useEffect(() => {
     const loadNumbers = async () => {
-      const { data } = await supabase
-        .from('numbers')
-        .select('*')
-        .eq('room_id', roomType)
-        .order('number', { ascending: true });
-      
-      if (data) {
-        setNumbers(data.map((n: any) => ({
-          number: n.number,
-          status: n.status,
-          reservedAt: n.reserved_at,
-          paymentMethod: n.payment_method
-        })));
+      try {
+        console.log('Cargando números para:', roomType);
+        
+        const { data, error } = await supabase
+          .from('numbers')
+          .select('*')
+          .eq('room_id', roomType)
+          .order('number', { ascending: true });
+        
+        if (error) {
+          console.error('Error:', error);
+          return;
+        }
+        
+        console.log('Números recibidos:', data?.length);
+        
+        if (data) {
+          setNumbers(data.map((n: any) => ({
+            number: n.number,
+            status: n.status,
+            reservedAt: n.reserved_at,
+            paymentMethod: n.payment_method
+          })));
+        }
+      } catch (err) {
+        console.error('Error inesperado:', err);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
     
     loadNumbers();
+    
+    // Recargar cada 5 segundos (polling simple sin realtime)
+    const interval = setInterval(loadNumbers, 5000);
+    return () => clearInterval(interval);
   }, [roomType]);
 
   const occupiedCount = numbers.filter(n => n.status === 'occupied').length;
