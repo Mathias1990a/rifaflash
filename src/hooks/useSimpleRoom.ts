@@ -14,17 +14,29 @@ export function useSimpleRoom(roomType: RoomType) {
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase
+      console.log('🔄 Cargando números para sala:', roomType);
+      const { data, error } = await supabase
         .from('numbers')
         .select('*')
         .eq('room_id', roomType)
         .order('number');
       
+      console.log('📊 Datos recibidos:', data);
+      console.log('❌ Error:', error);
+      
+      if (error) {
+        console.error('Error cargando números:', error);
+      }
+      
       if (data) {
+        console.log('✅ Números cargados:', data.length);
         setNumbers(data.map(n => ({
           number: n.number,
           status: n.status || 'available'
         })));
+      } else {
+        console.log('⚠️ No hay datos');
+        setNumbers([]);
       }
       setLoading(false);
     };
