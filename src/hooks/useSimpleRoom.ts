@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../services/supabase';
+import { getNumbersByRoom, subscribeToNumbers, getRoomById } from '../services/firebase';
 import { RoomType, RaffleNumber } from '../types';
 
 const ROOM_CONFIG = {
-  standard: { name: 'Sala Standard', maxPlayers: 50, price: 3000, prize: 100000, color: '#7c3aed', description: 'Sala estándar con 50 números' },
-  premium: { name: 'Sala Premium', maxPlayers: 25, price: 5000, prize: 100000, color: '#f59e0b', description: 'Sala premium con 25 números' },
-  vip: { name: 'Sala VIP', maxPlayers: 15, price: 10000, prize: 100000, color: '#ef4444', description: 'Sala VIP con 15 números' }
+  standard: { name: 'Sala $3000', maxPlayers: 50, price: 3000, prize: 100000, color: '#7c3aed', description: 'Sala estándar con 50 números' },
+  premium: { name: 'Sala $5000', maxPlayers: 25, price: 5000, prize: 100000, color: '#f59e0b', description: 'Sala premium con 25 números' },
+  vip: { name: 'Sala $10000', maxPlayers: 15, price: 10000, prize: 100000, color: '#ef4444', description: 'Sala VIP con 15 números' }
 };
 
 export function useSimpleRoom(roomType: RoomType) {
@@ -13,34 +13,36 @@ export function useSimpleRoom(roomType: RoomType) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const load = async () => {
-      console.log('🔄 Cargando números para sala:', roomType);
-      const { data, error } = await supabase
-        .from('numbers')
-        .select('*')
-        .eq('room_id', roomType)
-        .order('number');
-      
-      console.log('📊 Datos recibidos:', data);
-      console.log('❌ Error:', error);
-      
-      if (error) {
-        console.error('Error cargando números:', error);
-      }
-      
-      if (data) {
-        console.log('✅ Números cargados:', data.length);
-        setNumbers(data.map(n => ({
+    // Cargar números iniciales
+    const loadNumbers = async () => {
+      try {
+        const data = await getNumbersByRoom(roomType);
+        setNumbers(data.map((n: any) => ({
           number: n.number,
-          status: n.status || 'available'
+          status: n.status || 'available',
+          userId: n.userId,
+          userName: n.userName
         })));
-      } else {
-        console.log('⚠️ No hay datos');
-        setNumbers([]);
+      } catch (error) {
+        console.error('Error cargando números:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    load();
+    
+    loadNumbers();
+
+    // Suscribirse a cambios en tiempo real
+    const unsubscribe = subscribeToNumbers(roomType, (updatedNumbers) => {
+      setNumbers(updatedNumbers.map((n: any) => ({
+        number: n.number,
+        status: n.status || 'available',
+        userId: n.userId,
+        userName: n.userName
+      })));
+    });
+
+    return () => unsubscribe();
   }, [roomType]);
 
   const config = ROOM_CONFIG[roomType];

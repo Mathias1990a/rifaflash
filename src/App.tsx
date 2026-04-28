@@ -7,7 +7,6 @@ import { NumberGrid } from './components/NumberGrid';
 import { WinnersList, WinnersCompact } from './components/WinnersList';
 import { RoomSelector } from './components/RoomSelector';
 import { CasinoBolillero } from './components/CasinoBolillero';
-import { useSupabaseUser, useSupabaseWinners, useAllRoomsOccupiedCount } from './hooks/useSupabase';
 import { useSimpleRoom } from './hooks/useSimpleRoom';
 import { WorkingAdminPanel } from './components/WorkingAdminPanel';
 import { AuthModal, AdminLogin } from './components/AuthModal';
@@ -15,14 +14,16 @@ import { PurchaseModal } from './components/PurchaseModal';
 import { MultiPurchaseModal } from './components/MultiPurchaseModal';
 import { FinalRaffle } from './components/FinalRaffle';
 import { Logo } from './components/Logo';
-import { supabase } from './services/supabase';
+import { initializeFirebaseData, onAuthChange, logoutUser, getWinners, subscribeToWinners, getRooms, addWinner as addWinnerFirebase } from './services/firebase';
 import { RoomType, Winner } from './types';
 import './index.css';
 
 function App() {
-  const { user, isLoading: userLoading, registerUser, logout, setUser } = useSupabaseUser();
-  const { winners, isLoading: winnersLoading, addWinner } = useSupabaseWinners();
-  const { occupiedCounts, isLoading: countsLoading } = useAllRoomsOccupiedCount();
+  const [user, setUser] = useState<any>(null);
+  const [userLoading, setUserLoading] = useState(true);
+  const [winners, setWinners] = useState<Winner[]>([]);
+  const [winnersLoading, setWinnersLoading] = useState(true);
+  const [rooms, setRooms] = useState<any[]>([]);
   
   const [selectedRoom, setSelectedRoom] = useState<RoomType>('standard');
   const [showRegistration, setShowRegistration] = useState(false);
@@ -39,6 +40,64 @@ function App() {
 
   const room = useSimpleRoom(selectedRoom);
 
+  // Inicializar Firebase y cargar datos
+  useEffect(() => {
+    const init = async () => {
+      await initializeFirebaseData();
+      const roomsData = await getRooms();
+      setRooms(roomsData);
+    };
+    init();
+  }, []);
+
+  // Escuchar cambios de autenticación
+  useEffect(() => {
+    const unsubscribe = onAuthChange((firebaseUser) => {
+      if (firebaseUser) {
+        // El usuario está logueado, los datos se cargan en el login
+        setUserLoading(false);
+      } else {
+        setUser(null);
+        setUserLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Cargar ganadores
+  useEffect(() => {
+    const loadWinners = async () => {
+      const data = await getWinners();
+      setWinners(data.map((w: any) => ({
+        roomType: w.roomId,
+        roomName: w.roomName,
+        number: w.number,
+        playerName: w.playerName,
+        playerDNI: w.playerDni,
+        prize: w.prize,
+        drawDate: w.drawDate?.toDate?.() || new Date()
+      })));
+      setWinnersLoading(false);
+    };
+    loadWinners();
+
+    // Suscribirse a nuevos ganadores
+    const unsubscribe = subscribeToWinners((newWinners) => {
+      setWinners(newWinners.map((w: any) => ({
+        roomType: w.roomId,
+        roomName: w.roomName,
+        number: w.number,
+        playerName: w.playerName,
+        playerDNI: w.playerDni,
+        prize: w.prize,
+        drawDate: w.drawDate?.toDate?.() || new Date()
+      })));
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
     if (room.isComplete && !room.isLoading && !currentWinner && !showFinalRaffle) {
       setShowFinalRaffle(true);
@@ -51,31 +110,23 @@ function App() {
     // Buscar el ganador en los números ocupados
     const winnerNum = room.numbers.find(n => n.number === winnerNumber && n.status === 'occupied');
     
-    if (winnerNum && 'user_id' in winnerNum && winnerNum.user_id) {
-      // Obtener datos del usuario ganador
-      const { data: userData } = await supabase
-        .from('users')
-        .select('full_name, dni')
-        .eq('id', (winnerNum as any).user_id)
-        .single();
+    if (winnerNum && winnerNum.userId) {
+      // El número ya tiene la info del usuario
+      const winnerData: Winner = {
+        id: Date.now().toString(),
+        roomType: selectedRoom,
+        roomName: room.roomConfig.name,
+        number: winnerNumber,
+        playerName: winnerNum.userName || 'Usuario ' + winnerNum.userId,
+        playerDNI: winnerNum.userId,
+        prize: room.roomConfig.prize,
+        date: new Date().toISOString(),
+        timestamp: Date.now()
+      };
       
-      if (userData) {
-        const winnerData: Winner = {
-          id: Date.now().toString(),
-          roomType: selectedRoom,
-          roomName: room.roomConfig.name,
-          number: winnerNumber,
-          playerName: userData.full_name,
-          playerDNI: userData.dni,
-          prize: room.roomConfig.prize,
-          date: new Date().toISOString(),
-          timestamp: Date.now()
-        };
-        
-        setCurrentWinner(winnerData);
-        await addWinner(winnerData);
-        setShowWinner(true);
-      }
+      setCurrentWinner(winnerData);
+      await addWinnerFirebase(winnerData);
+      setShowWinner(true);
     }
   };
 
@@ -125,7 +176,7 @@ function App() {
     setIsAdminPanelOpen(true);
   };
 
-  if (userLoading || room.isLoading || winnersLoading || countsLoading) {
+  if (userLoading || room.isLoading || winnersLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4c1d95 0%, #6366f1 50%, #3b82f6 100%)' }}>
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
@@ -238,8 +289,10 @@ function App() {
                     )}
 
                     <button
-                      onClick={() => {
-                        logout();
+                      onClick={async () => {
+                        await logoutUser();
+                        setUser(null);
+                        localStorage.removeItem('rifaflash_user');
                         setShowMobileMenu(false);
                       }}
                       className="px-4 py-3 rounded-xl bg-red-500/10 text-red-400 text-center"
@@ -282,7 +335,11 @@ function App() {
             <RoomSelector 
               selectedRoom={selectedRoom} 
               onSelectRoom={setSelectedRoom}
-              occupiedCounts={occupiedCounts}
+              occupiedCounts={{
+                standard: room.occupiedCount,
+                premium: rooms.find(r => r.id === 'premium')?.occupiedCount || 0,
+                vip: rooms.find(r => r.id === 'vip')?.occupiedCount || 0
+              }}
             />
           </div>
 

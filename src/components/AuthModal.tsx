@@ -4,7 +4,7 @@ import { User, Lock, Eye, EyeOff, LogIn, UserPlus, Gift } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { supabase } from '../services/supabase';
+import { createUserInFirebase, loginUser, verifyAdmin } from '../services/firebase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -37,22 +37,16 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
     setError('');
     
     try {
-      const { data, error } = await supabase
-        .rpc('verify_user', {
-          p_dni: loginDni,
-          p_password: loginPassword
-        });
+      const userData = await loginUser(loginDni, loginPassword);
       
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        onLogin(data[0]);
+      if (userData) {
+        onLogin(userData);
         onClose();
       } else {
         setError('DNI o contraseña incorrectos');
       }
-    } catch (err) {
-      setError('Error al iniciar sesión');
+    } catch (err: any) {
+      setError(err.message || 'Error al iniciar sesión');
     } finally {
       setIsLoading(false);
     }
@@ -75,42 +69,23 @@ export function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
     setIsLoading(true);
     
     try {
-      const { data, error } = await supabase
-        .rpc('create_user_with_referral', {
-          p_full_name: registerData.fullName,
-          p_dni: registerData.dni,
-          p_phone: registerData.phone,
-          p_cvu_alias: registerData.cvuAlias,
-          p_password: registerData.password,
-          p_referral_code: registerData.referralCode || null
-        });
+      const userData = await createUserInFirebase({
+        fullName: registerData.fullName,
+        dni: registerData.dni,
+        phone: registerData.phone,
+        cvuAlias: registerData.cvuAlias,
+        password: registerData.password,
+        referralCode: registerData.referralCode || undefined
+      });
       
-      if (error) {
-        if (error.message.includes('unique constraint')) {
-          setError('Ya existe un usuario con ese DNI. Iniciá sesión.');
-        } else if (error.message.includes('Código de referido inválido')) {
-          setError('El código de referido no es válido');
-        } else {
-          throw error;
-        }
-        return;
+      onLogin(userData);
+      onClose();
+    } catch (err: any) {
+      if (err.message.includes('email-already-in-use') || err.message.includes('already exists')) {
+        setError('Ya existe un usuario con ese DNI. Iniciá sesión.');
+      } else {
+        setError(err.message || 'Error al crear cuenta');
       }
-      
-      const { data: loginData } = await supabase
-        .rpc('verify_user', {
-          p_dni: registerData.dni,
-          p_password: registerData.password
-        });
-      
-      if (loginData && loginData.length > 0) {
-        onLogin({
-          ...loginData[0],
-          referralCode: data[0]?.referral_code
-        });
-        onClose();
-      }
-    } catch (err) {
-      setError('Error al crear cuenta');
     } finally {
       setIsLoading(false);
     }
@@ -355,23 +330,17 @@ export function AdminLogin({ isOpen, onClose, onLogin }: AdminLoginProps) {
     setError('');
     
     try {
-      const { data, error } = await supabase
-        .rpc('verify_admin', {
-          p_username: username,
-          p_password: password
-        });
+      const isValid = await verifyAdmin(username, password);
       
-      if (error) throw error;
-      
-      if (data) {
+      if (isValid) {
         localStorage.setItem('rifaflash_admin_session', 'true');
         onLogin();
         onClose();
       } else {
         setError('Usuario o contraseña incorrectos');
       }
-    } catch (err) {
-      setError('Error al verificar credenciales');
+    } catch (err: any) {
+      setError(err.message || 'Error al verificar credenciales');
     } finally {
       setIsLoading(false);
     }
