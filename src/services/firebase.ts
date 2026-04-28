@@ -31,12 +31,12 @@ import { RoomType, RaffleNumber, UserProfile, Winner } from '../types';
 
 // Tu configuración de Firebase (la vas a obtener de la consola de Firebase)
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "rifaflash.firebaseapp.com",
-  projectId: "rifaflash",
-  storageBucket: "rifaflash.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
+  apiKey: "AIzaSyDQBA09NCb9JbDKcHmb75HoEQfRZHtcbLg",
+  authDomain: "rifaflash-1f668.firebaseapp.com",
+  projectId: "rifaflash-1f668",
+  storageBucket: "rifaflash-1f668.firebasestorage.app",
+  messagingSenderId: "732413930662",
+  appId: "1:732413930662:web:c3ef8d8a21cfaf4344d867"
 };
 
 // Inicializar Firebase
@@ -326,11 +326,11 @@ export async function addWinner(winner: Winner) {
   });
 }
 
-export async function getWinners(limit: number = 50) {
+export async function getWinners(maxWinners: number = 50) {
   const q = query(
     collection(db, 'winners'),
     orderBy('drawDate', 'desc'),
-    limit(limit)
+    limit(maxWinners)
   );
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => doc.data());

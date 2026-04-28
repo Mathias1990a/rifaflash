@@ -4,7 +4,7 @@ import { X, ShoppingCart, Trash2, Plus, Minus, CreditCard, CheckCircle } from 'l
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { supabase } from '../services/supabase';
+import { createPayment, reserveNumber } from '../services/firebase';
 import { TelegramService } from '../services/telegram';
 import { RoomType } from '../types';
 
